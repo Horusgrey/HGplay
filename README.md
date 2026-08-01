@@ -43,6 +43,18 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 | `docs/LEGAL_TEMPLATES_COMPLIANCE.md` | Per-state agreement templates + compliance reference |
 | `docs/governance/` | PRJ-HB7K4 canon: Start Here, Scope Audit, Master Control |
 
+## Try it in one command (synthetic data)
+
+```bash
+pip install -r requirements.txt
+python demo_pilot.py
+```
+
+Runs the entire loop against `fixtures/synthetic_wi_records.csv` (24 fake
+records) and proves every compliance gate fires: fee clamps to 10%, agreements
+are refused for ineligible/unverified records, and suppressed records vanish
+from outreach and the action queue. Uses a throwaway DB — no real data touched.
+
 ## Quick Start
 
 ```bash

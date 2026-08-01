@@ -122,6 +122,16 @@ is precisely what the audit recommends (freeze as v0.2, test, then decide).
 
 ---
 
+## See it run: `python demo_pilot.py`
+
+A one-command pilot drives the whole loop against 24 synthetic records
+(`fixtures/synthetic_wi_records.csv`) and proves each gate fires — import +
+dedupe, eligibility verification, enrichment, honest capped outreach, a
+**blocked** agreement for an ineligible record, an **allowed** agreement for an
+eligible one (fed 20%, clamped to 10%), suppression, and the daily action queue.
+It uses a throwaway DB and leaves no real data behind — exactly the supervised
+pilot the audit asks for, minus real records.
+
 ## Roadmap to fuller autonomy (safe order)
 
 1. **Now:** compliance gates live (done). Run the daily loop on synthetic data.

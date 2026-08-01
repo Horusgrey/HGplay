@@ -1,0 +1,25 @@
+Property ID,First Name,Last Name,Amount,Property Type,Holder,Address,City,State,Zip,custody_date
+WI-100000,Ada,Fauxname,250236.20,Uncashed Checks,BRIGHTHOUSE LIFE INSURANCE CO,100 Oak St,Madison,WI,53703,2019-03-01
+WI-100001,Boone,Testerly,2955.10,Insurance Proceeds,METLIFE INC,107 Elm St,Milwaukee,WI,53202,2020-07-15
+WI-100002,Cleo,Sampleton,1017.39,Securities/Dividends,COINBASE INC,114 Maple St,Green Bay,WI,54301,2021-01-10
+WI-100003,Dex,Placeholder,303716.93,Dormant Savings,CHARLES SCHWAB & CO,121 Birch St,Kenosha,WI,53140,2021-11-20
+WI-100004,Elm,Fictitial,77095.19,Utility Deposit,FIDELITY INVESTMENTS,128 Cedar St,Eau Claire,WI,54701,2022-05-05
+WI-100005,Faye,Mockford,13236.84,Refund,US BANK NA,135 Pine St,Hudson,WI,54016,2022-09-30
+WI-100006,Gio,Synthe,384.55,Trust Distribution,ASSOCIATED BANK,142 Oak St,Appleton,WI,54911,2023-02-14
+WI-100007,Hana,Demoson,90693.29,Misc. Outstanding Checks,WE ENERGIES,149 Elm St,Racine,WI,53403,2024-01-01
+WI-100008,Ives,Dummerly,80049.31,Uncashed Checks,ALLIANT ENERGY,156 Maple St,Madison,WI,53703,2025-01-15
+WI-100009,Juno,Notreal,300373.60,Insurance Proceeds,ESTATE OF A. SAMPLE,163 Birch St,Milwaukee,WI,53202,2025-06-01
+WI-100010,Kestrel,Stubbs,14108.44,Securities/Dividends,ACME HOLDINGS LLC (DISSOLVED),170 Cedar St,Green Bay,WI,54301,2025-10-10
+WI-100011,Lark,Exemplar,143752.41,Dormant Savings,UNKNOWN HOLDER,177 Pine St,Kenosha,WI,53140,2026-02-01
+WI-100012,Moss,Fixtura,193.98,Utility Deposit,BRIGHTHOUSE LIFE INSURANCE CO,184 Oak St,Eau Claire,WI,54701,
+WI-100013,Nova,Prototyp,1006.47,Refund,METLIFE INC,191 Elm St,Hudson,WI,54016,
+WI-100014,Odie,Sandbox,7280.22,Trust Distribution,COINBASE INC,198 Maple St,Appleton,WI,54911,
+WI-100015,Pax,Redacted,1705.75,Misc. Outstanding Checks,CHARLES SCHWAB & CO,205 Birch St,Racine,WI,53403,2019-03-01
+WI-100016,Quill,Nulls,6869.17,Uncashed Checks,FIDELITY INVESTMENTS,212 Cedar St,Madison,WI,53703,2020-07-15
+WI-100017,Rhea,Voidmark,13536.83,Insurance Proceeds,US BANK NA,219 Pine St,Milwaukee,WI,53202,2021-01-10
+WI-100018,Sage,Blanke,8042.72,Securities/Dividends,ASSOCIATED BANK,226 Oak St,Green Bay,WI,54301,2021-11-20
+WI-100019,Thorne,Ghostly,192.41,Dormant Savings,WE ENERGIES,233 Elm St,Kenosha,WI,53140,2022-05-05
+WI-100020,Uma,Paperman,78095.41,Utility Deposit,ALLIANT ENERGY,240 Maple St,Eau Claire,WI,54701,2022-09-30
+WI-100021,Vale,Ledgerly,13454.06,Refund,ESTATE OF A. SAMPLE,247 Birch St,Hudson,WI,54016,2023-02-14
+WI-100022,Wren,Escheat,3516.23,Trust Distribution,ACME HOLDINGS LLC (DISSOLVED),254 Cedar St,Appleton,WI,54911,2024-01-01
+WI-100023,Zephyr,Custody,171807.87,Misc. Outstanding Checks,UNKNOWN HOLDER,261 Pine St,Racine,WI,53403,2025-01-15
