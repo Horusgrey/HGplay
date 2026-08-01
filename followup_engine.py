@@ -16,6 +16,7 @@ from pathlib import Path
 
 from heirbud_crm import HeirBudCRM
 from outreach_generator import generate_scripts
+import compliance
 
 RULES = [
     # (stage, days_stale, action, urgency)
@@ -39,6 +40,8 @@ def build_action_queue(crm: HeirBudCRM) -> list[dict]:
     actions = []
     for stage, min_days, template, urgency in RULES:
         for p in crm.get_prospects_by_stage(stage):
+            if p.get("suppression_status") == "SUPPRESSED":
+                continue  # opted-out records never surface in the action queue
             log = p.get("contact_log") or []
             ref_ts = max((l["date"] for l in log), default=p.get("updated_at", ""))
             stale = days_since(ref_ts)
@@ -53,7 +56,9 @@ def build_action_queue(crm: HeirBudCRM) -> list[dict]:
                     "phone": p.get("phone"),
                     "email": p.get("email"),
                     "action": template.format(days=stale),
-                    "potential_fee": round(p["amount"] * (0.12 if p["amount"] > 200000 else 0.15), 2),
+                    # Published property value × capped fee. NOT booked revenue —
+                    # only realized once the owner is actually paid by the state.
+                    "estimated_fee_if_recovered": compliance.fee_amount(p["amount"]),
                 })
     # urgency first, then amount
     actions.sort(key=lambda a: (a["urgency"], -a["amount"]))
@@ -70,8 +75,9 @@ def render_markdown(actions: list[dict], summary: dict) -> str:
         lines.append("✅ Nothing stale. Pipeline is current. Go import more prospects.")
         return "\n".join(lines)
 
-    total_fee = sum(a["potential_fee"] for a in actions)
-    lines.append(f"**{len(actions)} actions today** · ${total_fee:,.0f} in potential fees on the line")
+    total_fee = sum(a["estimated_fee_if_recovered"] for a in actions)
+    lines.append(f"**{len(actions)} actions today** · ${total_fee:,.0f} estimated fees "
+                 f"IF every case is recovered (not booked revenue)")
     lines.append("")
 
     for i, a in enumerate(actions, 1):
@@ -79,7 +85,7 @@ def render_markdown(actions: list[dict], summary: dict) -> str:
         lines.append(f"## {i}. {a['name']} — ${a['amount']:,.0f}")
         lines.append(f"**{a['action']}**")
         lines.append(f"- Stage: {a['stage']} ({a['stale_days']}d) · Contact: {contact} "
-                     f"· Fee if closed: ${a['potential_fee']:,.0f}")
+                     f"· Est. fee if recovered: ${a['estimated_fee_if_recovered']:,.0f}")
         lines.append("")
     return "\n".join(lines)
 

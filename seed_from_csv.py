@@ -7,9 +7,22 @@ Usage:
 """
 import argparse
 import csv
+import hashlib
 import sys
 import urllib.parse
 from heirbud_crm import HeirBudCRM
+
+
+def deterministic_id(name: str, address: str) -> str:
+    """Stable fallback ID when the source lacks a property ID.
+
+    Uses a SHA-1 of normalized fields so the SAME record always yields the
+    SAME id across runs and machines — Python's built-in hash() is
+    process-randomized and produced a different id every run, defeating
+    deduplication (flagged in the PRJ-HB7K4 audit).
+    """
+    key = f"{(name or '').strip().lower()}|{(address or '').strip().lower()}"
+    return "GEN-" + hashlib.sha1(key.encode("utf-8")).hexdigest()[:12].upper()
 
 # Column aliases — handles variations across WI exports
 COL_MAP = {
@@ -92,7 +105,7 @@ def seed(file: str, min_amount: float, max_rows: int, priority_only: bool) -> di
                 continue
 
             rows.append({
-                "property_id": row.get(cols["property_id"] or "", "") or f"GEN-{abs(hash(name+address)) % 10**8}",
+                "property_id": row.get(cols["property_id"] or "", "") or deterministic_id(name, address),
                 "name": name,
                 "last_known_address": address,
                 "amount": amount,

@@ -10,6 +10,8 @@ from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
 from reportlab.pdfgen import canvas
 
+import compliance
+
 OUTPUT_DIR = Path(__file__).parent / "contracts"
 
 INK = HexColor("#1a1814")
@@ -18,8 +20,20 @@ GREEN = HexColor("#1a5c2a")
 LINE = HexColor("#c8c0b0")
 
 
-def generate_contract(prospect: dict, fee_pct: int = 15, output_dir=OUTPUT_DIR) -> str:
-    """Generate the PDF; returns the file path."""
+def generate_contract(prospect: dict, fee_pct: float = None, output_dir=OUTPUT_DIR,
+                      require_eligibility: bool = True) -> str:
+    """Generate the agreement PDF; returns the file path.
+
+    The fee is always clamped to the state cap (10% in WI). Generation is
+    gated on eligibility: unless ``require_eligibility=False`` (test/demo only),
+    the prospect must have a verified custody date >= 24 months old AND a human
+    eligibility review, or compliance.EligibilityError is raised. This makes it
+    structurally impossible to emit a void agreement.
+    """
+    if require_eligibility:
+        compliance.assert_agreement_allowed(prospect)
+    fee_pct = compliance.cap_fee_pct(fee_pct) if fee_pct is not None else compliance.compliant_fee_pct()
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     safe_name = "".join(c if c.isalnum() else "_" for c in prospect.get("name", "Unknown"))
@@ -97,28 +111,35 @@ def generate_contract(prospect: dict, fee_pct: int = 15, output_dir=OUTPUT_DIR) 
     c.drawString(M, y, "TERMS OF ENGAGEMENT")
     y -= 18
 
-    fee_amount = amount * fee_pct / 100
+    fee_amount = compliance.fee_amount(amount, fee_pct)
+    net_to_claimant = amount - fee_amount
     terms = [
-        f"1. ZGroup LLC (\"Locator\") agrees to assist the Claimant in recovering the above-referenced",
-        f"    unclaimed property from the Wisconsin Department of Revenue Unclaimed Property Division,",
-        f"    including preparation and filing of all required claim forms, affidavits, and supporting",
-        f"    documentation, and all follow-up correspondence with the state treasury.",
+        f"1. SERVICES. ZGroup LLC (\"Locator\") agrees to assist the Claimant in recovering the",
+        f"    above-referenced unclaimed property from the Wisconsin Department of Revenue Unclaimed",
+        f"    Property Division, including preparation of required claim forms and documentation and",
+        f"    follow-up correspondence with the state. Locator is NOT the State of Wisconsin.",
         "",
-        f"2. CONTINGENCY FEE: Locator's fee shall be {fee_pct}% of the gross recovered amount",
-        f"    (estimated fee: ${fee_amount:,.2f}), due and payable ONLY upon successful recovery and",
-        f"    receipt of funds by the Claimant. If no recovery is made, no fee is owed.",
+        f"2. CONTINGENCY FEE. Locator's fee is {fee_pct:.0f}% of the amount actually recovered — the",
+        f"    maximum a locator may charge under Wisconsin law. On the estimated value shown above:",
+        f"        Property value (before fee):   ${amount:,.2f}",
+        f"        Locator fee ({fee_pct:.0f}%):              ${fee_amount:,.2f}",
+        f"        Estimated to Claimant (after): ${net_to_claimant:,.2f}",
+        f"    The fee is due ONLY upon successful recovery and receipt of funds by the Claimant,",
+        f"    within {compliance.FEE_PAYMENT_WINDOW_DAYS} days of payment. If no recovery is made, no fee is owed.",
         "",
-        f"3. NO UPFRONT COST: Claimant shall owe nothing under any circumstances prior to recovery.",
+        f"3. NO UPFRONT COST. Claimant owes nothing under any circumstances prior to recovery.",
         "",
-        f"4. RIGHT TO SELF-FILE: Claimant acknowledges they retain the right to claim this property",
-        f"    directly through the State of Wisconsin at no cost, and enters this agreement to engage",
-        f"    Locator's services voluntarily for convenience and expertise.",
+        f"4. YOUR RIGHT TO CLAIM FOR FREE. {compliance.STATE_PORTAL}  ·  {compliance.STATE_PHONE}",
+        f"    You may claim this property yourself, directly from the State of Wisconsin, at no cost.",
+        f"    You are engaging Locator voluntarily, for convenience, and may decline at any time.",
         "",
-        f"5. TERMINATION: Claimant may terminate this agreement in writing at any time prior to the",
+        f"5. TERMINATION. Claimant may terminate this agreement in writing at any time prior to the",
         f"    filing of the claim with the state.",
     ]
     c.setFont("Helvetica", 9)
     for line in terms:
+        # Bold the free-claim heading so the disclosure is unmistakable.
+        c.setFont("Helvetica-Bold" if line.strip().startswith("4. YOUR RIGHT") else "Helvetica", 9)
         c.drawString(M, y, line)
         y -= 12.5
 
@@ -154,8 +175,11 @@ def generate_contract(prospect: dict, fee_pct: int = 15, output_dir=OUTPUT_DIR) 
 
 
 if __name__ == "__main__":
-    demo = {"property_id": "8476391", "name": "John Hoover",
-            "last_known_address": "560 White Oak Cir, Hudson, WI 54016",
+    # SYNTHETIC demo record — eligible (custody > 24mo) and human-reviewed.
+    demo = {"property_id": "DEMO-0001", "name": "Jordan Sample",
+            "last_known_address": "1 Test St, Madison, WI 53703",
             "amount": 283265.10, "property_type": "Misc. Outstanding Checks",
-            "holder": "COINBASE INC"}
+            "holder": "EXAMPLE HOLDINGS INC",
+            "custody_date": "2021-01-01", "eligibility_reviewed": True}
+    # fee_pct=12 is intentionally over the cap; it will be clamped to 10%.
     print("Generated:", generate_contract(demo, fee_pct=12))

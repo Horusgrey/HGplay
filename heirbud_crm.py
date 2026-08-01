@@ -1,6 +1,11 @@
 """
 HeirBud CRM — SQLite-backed pipeline tracker for ZGroup LLC.
 Stages: IDENTIFIED → ENRICHED → CONTACTED → RESPONDED → AGREEMENT_SENT → SIGNED → FILED → PAID → CLOSED
+
+Compliance fields (per PRJ-HB7K4 audit) track custody date, eligibility
+review, consent, and suppression so no agreement can be generated for an
+ineligible or opted-out record. SUPPRESSED is a terminal stage: a record
+there must never be contacted again.
 """
 import sqlite3
 import json
@@ -10,7 +15,17 @@ from pathlib import Path
 DB_PATH = Path(__file__).parent / "heirbud.db"
 
 STAGES = ["IDENTIFIED", "ENRICHED", "CONTACTED", "RESPONDED",
-          "AGREEMENT_SENT", "SIGNED", "FILED", "PAID", "CLOSED"]
+          "AGREEMENT_SENT", "SIGNED", "FILED", "PAID", "CLOSED", "SUPPRESSED"]
+
+# Columns added after v1. Migrated in on open so existing DBs keep working.
+COMPLIANCE_COLUMNS = {
+    "custody_date": "TEXT",             # verified DOR custody date (ISO or year)
+    "eligibility_reviewed": "INTEGER DEFAULT 0",  # 1 once a human confirms
+    "eligibility_reason": "TEXT DEFAULT ''",       # last eligibility verdict
+    "consent_status": "TEXT DEFAULT 'NONE'",       # NONE | GIVEN | WITHDRAWN
+    "suppression_status": "TEXT DEFAULT 'ACTIVE'", # ACTIVE | SUPPRESSED
+    "source_verified_date": "TEXT",     # when the state record was re-verified
+}
 
 
 class HeirBudCRM:
@@ -38,6 +53,12 @@ class HeirBudCRM:
                 email TEXT,
                 notes TEXT DEFAULT '',
                 search_urls TEXT DEFAULT '{}',
+                custody_date TEXT,
+                eligibility_reviewed INTEGER DEFAULT 0,
+                eligibility_reason TEXT DEFAULT '',
+                consent_status TEXT DEFAULT 'NONE',
+                suppression_status TEXT DEFAULT 'ACTIVE',
+                source_verified_date TEXT,
                 created_at TEXT,
                 updated_at TEXT
             )""")
@@ -60,6 +81,11 @@ class HeirBudCRM:
             )""")
             c.execute("CREATE INDEX IF NOT EXISTS idx_stage ON prospects(stage)")
             c.execute("CREATE INDEX IF NOT EXISTS idx_amount ON prospects(amount)")
+            # Migrate compliance columns onto pre-existing databases.
+            existing = {r[1] for r in c.execute("PRAGMA table_info(prospects)")}
+            for col, decl in COMPLIANCE_COLUMNS.items():
+                if col not in existing:
+                    c.execute(f"ALTER TABLE prospects ADD COLUMN {col} {decl}")
 
     # ── PROSPECTS ──
     def add_prospect(self, p: dict) -> bool:
@@ -70,13 +96,18 @@ class HeirBudCRM:
                 c.execute("""INSERT INTO prospects
                     (property_id, name, last_known_address, amount, property_type,
                      holder, priority, stage, phone, email, notes, search_urls,
+                     custody_date, eligibility_reviewed, eligibility_reason,
+                     consent_status, suppression_status, source_verified_date,
                      created_at, updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (str(p["property_id"]), p["name"], p.get("last_known_address", ""),
                      float(p.get("amount", 0)), p.get("property_type", ""),
                      p.get("holder", ""), p.get("priority", "MEDIUM"),
                      p.get("stage", "IDENTIFIED"), p.get("phone"), p.get("email"),
                      p.get("notes", ""), json.dumps(p.get("search_urls", {})),
+                     p.get("custody_date"), int(bool(p.get("eligibility_reviewed", 0))),
+                     p.get("eligibility_reason", ""), p.get("consent_status", "NONE"),
+                     p.get("suppression_status", "ACTIVE"), p.get("source_verified_date"),
                      now, now))
             return True
         except sqlite3.IntegrityError:
@@ -104,7 +135,9 @@ class HeirBudCRM:
 
     def update_prospect(self, property_id: str, **fields) -> bool:
         allowed = {"name", "last_known_address", "amount", "property_type", "holder",
-                   "priority", "phone", "email", "notes", "search_urls"}
+                   "priority", "phone", "email", "notes", "search_urls",
+                   "custody_date", "eligibility_reviewed", "eligibility_reason",
+                   "consent_status", "suppression_status", "source_verified_date"}
         sets, args = [], []
         for k, v in fields.items():
             if k in allowed:
@@ -127,8 +160,43 @@ class HeirBudCRM:
             d["search_urls"] = json.loads(d.get("search_urls") or "{}")
         except (json.JSONDecodeError, TypeError):
             d["search_urls"] = {}
+        d["eligibility_reviewed"] = bool(d.get("eligibility_reviewed"))
         d["contact_log"] = self.get_contact_log(d["property_id"])
         return d
+
+    # ── ELIGIBILITY / CONSENT ──
+    def set_eligibility(self, property_id: str, custody_date: str,
+                        reviewed: bool = False, reviewer: str = "") -> dict | None:
+        """Record a custody date and re-run the eligibility check.
+
+        Returns the compliance verdict dict, or None if the prospect is absent.
+        Marking ``reviewed=True`` asserts a human confirmed the state record;
+        only then can an agreement be generated (see compliance.assert_agreement_allowed).
+        """
+        from compliance import check_eligibility  # local import avoids cycle at import time
+        if not self.get_prospect(property_id):
+            return None
+        verdict = check_eligibility(custody_date)
+        self.update_prospect(
+            property_id,
+            custody_date=custody_date,
+            eligibility_reviewed=int(bool(reviewed and verdict.eligible)),
+            eligibility_reason=verdict.reason,
+            source_verified_date=datetime.now().isoformat() if reviewed else None,
+        )
+        if reviewer:
+            self.log_contact_attempt(property_id, "System", "Eligibility Reviewed",
+                                     f"{reviewer}: {verdict.reason}")
+        return verdict.as_dict()
+
+    def suppress(self, property_id: str, reason: str = "") -> bool:
+        """Opt a record out of all future outreach. Terminal and irreversible in flow."""
+        if not self.get_prospect(property_id):
+            return False
+        self.update_prospect(property_id, suppression_status="SUPPRESSED",
+                             consent_status="WITHDRAWN")
+        self.update_stage(property_id, "SUPPRESSED", reason or "Suppressed")
+        return True
 
     # ── STAGE ──
     def update_stage(self, property_id: str, stage: str, notes: str = "") -> bool:
@@ -154,12 +222,12 @@ class HeirBudCRM:
             c.execute("""INSERT INTO contact_log (property_id, method, outcome, notes, logged_at)
                          VALUES (?,?,?,?,?)""",
                       (str(property_id), method, outcome, notes, datetime.now().isoformat()))
-        # Auto-advance stage on key outcomes
+        # Auto-advance stage on key outcomes — but never resurrect a suppressed record.
         auto = {"Answered": "CONTACTED", "Sent": "CONTACTED", "Replied": "RESPONDED",
                 "Agreement Sent": "AGREEMENT_SENT", "Signed": "SIGNED", "Paid": "PAID"}
         if outcome in auto:
             current = self.get_prospect(property_id)["stage"]
-            if STAGES.index(auto[outcome]) > STAGES.index(current):
+            if current != "SUPPRESSED" and STAGES.index(auto[outcome]) > STAGES.index(current):
                 self.update_stage(property_id, auto[outcome], f"Auto: {outcome}")
         return True
 

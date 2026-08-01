@@ -1,8 +1,16 @@
 """
-outreach_generator.py — Generate personalized cold call / email / SMS scripts
-per prospect, tailored by asset holder type. Pure templates, fully offline.
+outreach_generator.py — Generate personalized call / email / SMS scripts per
+prospect, tailored by asset holder type. Pure templates, fully offline.
+
+Rewritten per the PRJ-HB7K4 audit and the project Email Template Library:
+the honesty IS the conversion strategy. Every script leads with the owner's
+money, states plainly they can claim it FREE from the state, frames the fee
+(capped at the state maximum) as optional convenience, and never impersonates
+the state or manufactures urgency. Suppressed records return no scripts.
 """
 import re
+
+import compliance
 
 
 def holder_type(holder: str) -> str:
@@ -18,84 +26,88 @@ def holder_type(holder: str) -> str:
     return "general"
 
 
-def fee_for(amount: float) -> int:
-    return 12 if amount > 200000 else 15 if amount > 100000 else 20
-
-
+# Neutral, factual openers. No false authority, no "absorbed/seized" language.
 OPENERS = {
-    "insurance": "I located an outstanding file from {holder} — it appears to be a life insurance or benefit payout — that belongs to you, which has been transferred to the Wisconsin state treasury.",
-    "investment": "I found an outstanding account record from {holder} with your name on it — approximately ${amt} — which has been absorbed into the Wisconsin unclaimed property treasury.",
-    "bank": "I've located a dormant bank account record associated with {holder} — roughly ${amt} — sitting unclaimed in the Wisconsin state treasury.",
-    "utility": "I found an unclaimed utility refund or stock distribution from {holder} — approximately ${amt} — that's been transferred to Wisconsin's unclaimed property division.",
-    "general": "I found an outstanding financial asset from {holder} — approximately ${amt} — that belongs to you and has been transferred to the Wisconsin state treasury for safekeeping.",
+    "insurance": "your name is attached to an unclaimed benefit or policy payout from {holder}, now held by the Wisconsin Department of Revenue.",
+    "investment": "your name is attached to an unclaimed account from {holder} — about ${amt} — now held by the Wisconsin Department of Revenue.",
+    "bank": "there's an unclaimed account balance associated with {holder} — about ${amt} — now held by the Wisconsin Department of Revenue.",
+    "utility": "there's an unclaimed refund or distribution from {holder} — about ${amt} — now held by the Wisconsin Department of Revenue.",
+    "general": "your name is attached to unclaimed property from {holder} — about ${amt} — now held by the Wisconsin Department of Revenue.",
 }
 
 
+class SuppressedProspectError(Exception):
+    """Raised when outreach is requested for an opted-out record."""
+
+
 def generate_scripts(prospect: dict) -> dict:
-    """Returns {cold_call_script, cold_email, sms_opener} for one prospect."""
+    """Returns {cold_call_script, cold_email, sms_opener, fee_pct, holder_type}."""
+    if prospect.get("suppression_status") == "SUPPRESSED":
+        raise SuppressedProspectError(
+            f"{prospect.get('name', 'record')} is suppressed — no outreach permitted.")
+
     name = prospect.get("name", "")
     fn = name.split(" ")[0] if name else "there"
     holder = prospect.get("holder", "the original institution")
     amount = float(prospect.get("amount", 0))
     amt = f"{amount:,.0f}"
-    fee = fee_for(amount)
-    fee_amt = f"{amount * fee / 100:,.0f}"
+    fee = compliance.compliant_fee_pct()           # 10%, capped by rule
+    fee_amt = f"{compliance.fee_amount(amount, fee):,.0f}"
     opener = OPENERS[holder_type(holder)].format(holder=holder, amt=amt)
 
-    cold_call_script = f"""THE Z-WAY CALL — {name.upper()}
+    cold_call_script = f"""HEIRBUD CALL — {name.upper()}
 
-"Hi, is this {fn}?... Hi {fn}, this is [Your Name] from ZGroup."
+"Hi, is this {fn}? ... Hi {fn}, this is [Your Name] with ZGroup, a Wisconsin
+locator service. I'm not with the state — I want to be clear about that up front.
 
-{opener}
+I research public unclaimed-property records, and {opener}"
 
-"Have you received any notices from the state about this?"
+"A few things you should know: this is your money, the state is holding it for
+you, and you can claim it yourself for free at {compliance.STATE_PORTAL} — you
+don't need me or anyone else to get it."
 
 [PAUSE — listen]
 
-"I want to be upfront with you. The state is holding this money and you have
-every right to claim it yourself at no cost on the Wisconsin state website.
-Some people do exactly that.
+"If you'd rather not deal with the paperwork and back-and-forth, that's what I
+do. I work on contingency: my fee is {fee:.0f}% — about ${fee_amt} — and only if
+you actually receive your money. We'd agree on it in writing first, and there's
+never any upfront cost. If you'd rather do it yourself, I'm glad to point you to
+the free state page and we're done."
 
-The state process involves affidavits, notarization, and 3-6 months of
-follow-up. We handle all of that. Our fee is {fee}% — that's ${fee_amt} —
-and we only get paid when the check is in your hands. Zero upfront cost, ever.
+[YES]: "Great. I'll send a plain one-page agreement so you can read it — no
+obligation. What's the best email for you?"
 
-Does that sound like something you'd want us to handle?"
+[NO / NOT INTERESTED]: "No problem at all. Please do claim it directly so it
+doesn't sit unclaimed — it's yours. Take care." """
 
-[YES]: "Great. Let me confirm a couple quick details and I'll send our
-one-page agreement tonight. What's the best email for you?"
-
-[NO]: "Completely understood. If the process gets complicated, don't
-hesitate to call me back. Have a great day." """
-
-    cold_email = f"""Subject: {name} — Outstanding Asset with Wisconsin Treasury (${amt})
+    cold_email = f"""Subject: {fn}, unclaimed property in your name — Wisconsin DOR
 
 Hi {fn},
 
-I'm reaching out about an unclaimed financial asset associated with your
-name — approximately ${amt} from {holder} — currently held by the Wisconsin
-Department of Revenue Unclaimed Property Division.
+I research unclaimed-property records, and {opener}
 
-You have the full legal right to claim this yourself at no cost through the
-state website. I want to be transparent about that.
+A few things up front:
+  • This is YOUR money — the state is holding it for you.
+  • You can claim it yourself, free, at {compliance.STATE_PORTAL}
+    (or call {compliance.STATE_PHONE}). You do not need me.
 
-The process involves affidavits, notarizations, and several months of
-follow-up. ZGroup specializes in handling exactly this on behalf of claimants.
+That's the honest version. If you'd rather skip the paperwork and follow-up,
+I help people recover these funds on contingency — a {fee:.0f}% fee (the maximum
+Wisconsin allows), agreed in writing beforehand, and owed ONLY if you actually
+get paid. No upfront cost, no risk to you.
 
-Our model: {fee}% contingency fee, zero upfront cost. You only pay if we recover.
+If you'd rather do it yourself, I'm genuinely glad to point you there at no charge.
 
-I can send you the official state record confirming your asset so you can
-verify before committing to anything.
+Want me to send the details so you can verify the record?
 
-Reply or call [Phone] if you'd like to see it.
-
-Best,
 [Your Name]
-ZGroup LLC — Wisconsin Asset Locator"""
+[Your Phone] · [Your Email]
+ZGroup LLC — Wisconsin locator service (not a government agency)"""
 
-    sms_opener = (f"Hi {fn}, this is [Name] from ZGroup. I found a ${amt} asset from "
-                  f"{holder} in the WI state treasury under your name. Can send the "
-                  f"official record to verify — no cost to look. Reply YES.")
+    sms_opener = (f"Hi {fn}, this is [Name] with ZGroup (a private WI locator, not the "
+                  f"state). Your name is on ~${amt} of unclaimed property held by "
+                  f"Wisconsin. You can claim it free at {compliance.STATE_PORTAL}. "
+                  f"Happy to help for a {fee:.0f}% fee only if you get paid — reply YES for details.")
 
     return {
         "cold_call_script": cold_call_script,
@@ -107,7 +119,7 @@ ZGroup LLC — Wisconsin Asset Locator"""
 
 
 if __name__ == "__main__":
-    demo = {"name": "John Hoover", "holder": "COINBASE INC", "amount": 283265.10}
+    demo = {"name": "Jordan Sample", "holder": "EXAMPLE HOLDINGS INC", "amount": 283265.10}
     s = generate_scripts(demo)
     print(s["cold_call_script"])
     print("\n" + "=" * 60 + "\n")
