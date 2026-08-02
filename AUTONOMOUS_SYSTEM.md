@@ -135,8 +135,12 @@ pilot the audit asks for, minus real records.
 ## Roadmap to fuller autonomy (safe order)
 
 1. **Now:** compliance gates live (done). Run the daily loop on synthetic data.
-2. **Next:** wire a verified custody-date feed → eligibility becomes automatic
-   for the green lane, human review only confirms.
+2. **Now:** custody-date verification workflow (`verification_queue.py`) —
+   prioritized worklist of records needing a verified custody date, each with
+   the DOR lookup link and report-year hint; verifications are recorded with
+   required evidence + reviewer so every eligibility decision is attributable.
+   (WI has no machine API for this, so the lookup stays human — but fast,
+   prioritized, and auditable. If/when a data feed exists, it drops in here.)
 3. **Then:** connect email send (Gmail API / dedicated domain) behind an
    "approve" button — see `docs/EMAIL_TEMPLATE_LIBRARY.md` deliverability rules.
 4. **Later:** reply-classification + next-best-action suggestions (AI recommends,

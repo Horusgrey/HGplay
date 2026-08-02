@@ -31,6 +31,7 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 | `outreach_generator.py` | Honest, capped call/email/SMS scripts by holder type (suppression-aware) |
 | `contract_generator.py` | One-page agreement PDFs — refuses to render unless eligible (reportlab) |
 | `followup_engine.py` | Daily prioritized action queue — run every morning |
+| `verification_queue.py` | Custody-date verification worklist — record eligibility with evidence |
 | `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
 
 ## Docs
@@ -99,7 +100,8 @@ records can never be resurrected by auto-advance.
 - `GET /actions/today` — prioritized daily action queue
 - `POST /seed/csv` — upload CSV directly to server
 - `POST /outreach/generate` — scripts for one prospect (409 if suppressed)
-- `POST /crm/eligibility` — record a verified custody date + human review
+- `GET /verification/worklist` — records needing a verified custody date
+- `POST /crm/eligibility` — record a verified custody date + evidence + human review
 - `POST /crm/suppress` — opt a record out of all future outreach
 - `POST /contract/generate` — PDF agreement (422 if not eligible)
 - `GET /pipeline/summary` — stage counts and total pipeline value

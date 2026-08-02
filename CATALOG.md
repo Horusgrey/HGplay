@@ -18,6 +18,7 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `outreach_generator.py` | Honest, capped call/email/SMS scripts (suppression-aware) |
 | `contract_generator.py` | Agreement PDFs — refuses to render unless eligible |
 | `followup_engine.py` | Daily prioritized action queue (autonomy layer) |
+| `verification_queue.py` | Custody-date verification worklist — prioritized, evidence-tracked |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
 | `demo_pilot.py` | **One-command end-to-end pilot** on synthetic data — proves every gate |
 | `fixtures/synthetic_wi_records.csv` | 24 fake WI records (16 eligible / 5 ineligible / 3 unverified) |

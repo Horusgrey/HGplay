@@ -25,6 +25,8 @@ COMPLIANCE_COLUMNS = {
     "consent_status": "TEXT DEFAULT 'NONE'",       # NONE | GIVEN | WITHDRAWN
     "suppression_status": "TEXT DEFAULT 'ACTIVE'", # ACTIVE | SUPPRESSED
     "source_verified_date": "TEXT",     # when the state record was re-verified
+    "custody_evidence": "TEXT DEFAULT ''",  # how custody date was confirmed (source/url/note)
+    "report_year": "TEXT",              # HINT ONLY — not a substitute for custody_date
 }
 
 
@@ -59,6 +61,8 @@ class HeirBudCRM:
                 consent_status TEXT DEFAULT 'NONE',
                 suppression_status TEXT DEFAULT 'ACTIVE',
                 source_verified_date TEXT,
+                custody_evidence TEXT DEFAULT '',
+                report_year TEXT,
                 created_at TEXT,
                 updated_at TEXT
             )""")
@@ -98,8 +102,9 @@ class HeirBudCRM:
                      holder, priority, stage, phone, email, notes, search_urls,
                      custody_date, eligibility_reviewed, eligibility_reason,
                      consent_status, suppression_status, source_verified_date,
+                     custody_evidence, report_year,
                      created_at, updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (str(p["property_id"]), p["name"], p.get("last_known_address", ""),
                      float(p.get("amount", 0)), p.get("property_type", ""),
                      p.get("holder", ""), p.get("priority", "MEDIUM"),
@@ -108,6 +113,7 @@ class HeirBudCRM:
                      p.get("custody_date"), int(bool(p.get("eligibility_reviewed", 0))),
                      p.get("eligibility_reason", ""), p.get("consent_status", "NONE"),
                      p.get("suppression_status", "ACTIVE"), p.get("source_verified_date"),
+                     p.get("custody_evidence", ""), p.get("report_year"),
                      now, now))
             return True
         except sqlite3.IntegrityError:
@@ -137,7 +143,8 @@ class HeirBudCRM:
         allowed = {"name", "last_known_address", "amount", "property_type", "holder",
                    "priority", "phone", "email", "notes", "search_urls",
                    "custody_date", "eligibility_reviewed", "eligibility_reason",
-                   "consent_status", "suppression_status", "source_verified_date"}
+                   "consent_status", "suppression_status", "source_verified_date",
+                   "custody_evidence", "report_year"}
         sets, args = [], []
         for k, v in fields.items():
             if k in allowed:
@@ -166,28 +173,54 @@ class HeirBudCRM:
 
     # ── ELIGIBILITY / CONSENT ──
     def set_eligibility(self, property_id: str, custody_date: str,
-                        reviewed: bool = False, reviewer: str = "") -> dict | None:
-        """Record a custody date and re-run the eligibility check.
+                        reviewed: bool = False, reviewer: str = "",
+                        evidence: str = "") -> dict | None:
+        """Record a verified custody date (with evidence) and re-run the check.
 
         Returns the compliance verdict dict, or None if the prospect is absent.
         Marking ``reviewed=True`` asserts a human confirmed the state record;
         only then can an agreement be generated (see compliance.assert_agreement_allowed).
+        ``evidence`` should say HOW custody was confirmed (e.g. "WI DOR portal
+        lookup 2026-08-02, property WI-100000, screenshot in Drive/…"). Marking
+        reviewed=True without evidence is refused — a review must be attributable.
         """
         from compliance import check_eligibility  # local import avoids cycle at import time
         if not self.get_prospect(property_id):
             return None
+        if reviewed and not (evidence or "").strip():
+            raise ValueError("A reviewed eligibility decision requires evidence "
+                             "(how the custody date was confirmed).")
         verdict = check_eligibility(custody_date)
         self.update_prospect(
             property_id,
             custody_date=custody_date,
             eligibility_reviewed=int(bool(reviewed and verdict.eligible)),
             eligibility_reason=verdict.reason,
+            custody_evidence=evidence,
             source_verified_date=datetime.now().isoformat() if reviewed else None,
         )
-        if reviewer:
+        if reviewer or evidence:
             self.log_contact_attempt(property_id, "System", "Eligibility Reviewed",
-                                     f"{reviewer}: {verdict.reason}")
+                                     f"{reviewer or 'reviewer'}: {verdict.reason} | {evidence}".strip())
         return verdict.as_dict()
+
+    def needs_custody_verification(self) -> list[dict]:
+        """Records that cannot yet get an agreement because custody is unverified.
+
+        Returns active (non-suppressed) prospects that lack a human-reviewed,
+        eligible custody date — i.e. the custody-verification worklist. Highest
+        value first, since that is where a verified eligible date unlocks the
+        most fee.
+        """
+        out = []
+        for p in self.get_all_prospects():
+            if p.get("suppression_status") == "SUPPRESSED":
+                continue
+            if p.get("eligibility_reviewed") and p.get("custody_date"):
+                continue  # already verified + eligible (reviewed only set when eligible)
+            out.append(p)
+        out.sort(key=lambda r: r.get("amount", 0), reverse=True)
+        return out
 
     def suppress(self, property_id: str, reason: str = "") -> bool:
         """Opt a record out of all future outreach. Terminal and irreversible in flow."""

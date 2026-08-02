@@ -98,11 +98,22 @@ def main():
         if not cd:
             unverified_ids.append(pid)
             continue
-        verdict = crm.set_eligibility(pid, cd, reviewed=True, reviewer="demo-reviewer")
+        verdict = crm.set_eligibility(
+            pid, cd, reviewed=True, reviewer="demo-reviewer",
+            evidence=f"WI DOR portal lookup (synthetic demo), custody {cd}")
         (elig_ids if verdict["eligible"] else inelig_ids).append(pid)
-    ok(f"{len(elig_ids)} eligible (custody ≥ 24mo, human-reviewed)")
+    ok(f"{len(elig_ids)} eligible (custody ≥ 24mo, human-reviewed, evidence recorded)")
     block(f"{len(inelig_ids)} ineligible (custody < 24mo) — agreements will be refused")
     info(f"{len(unverified_ids)} unverified (no custody date) — also cannot get an agreement")
+    # The verification worklist: everything not yet eligible-and-reviewed.
+    from verification_queue import build_worklist
+    worklist = build_worklist(crm)
+    unlockable = sum(w["fee_if_eligible_and_recovered"] for w in worklist)
+    info(f"Custody-verification worklist: {len(worklist)} records to look up "
+         f"(up to ${unlockable:,.0f} in fees IF eligible + recovered)")
+    if worklist:
+        top = worklist[0]
+        info(f"   top: {top['name']} ${top['amount']:,.0f} — {top['status'][:48]}")
 
     # ── 3. Enrich (skip-trace) a few → auto-advance to ENRICHED ─────────────
     banner(3, "Enrich contacts (auto-advances IDENTIFIED → ENRICHED)")

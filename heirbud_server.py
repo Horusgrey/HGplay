@@ -95,6 +95,7 @@ class EligibilityReq(BaseModel):
     custody_date: str              # verified DOR custody date (ISO or year)
     reviewed: bool = False         # True once a human confirms the state record
     reviewer: str = ""
+    evidence: str = ""             # required when reviewed=True (how it was confirmed)
 
 
 class SuppressReq(BaseModel):
@@ -200,12 +201,27 @@ def outreach(req: OutreachReq):
 
 @app.post("/crm/eligibility")
 def set_eligibility(req: EligibilityReq, _=Depends(require_key)):
-    """Record a verified custody date and (optionally) mark it human-reviewed."""
-    verdict = crm.set_eligibility(req.property_id, req.custody_date,
-                                  reviewed=req.reviewed, reviewer=req.reviewer)
+    """Record a verified custody date and (optionally) mark it human-reviewed.
+
+    A reviewed decision requires ``evidence`` (how the custody date was
+    confirmed) so every eligibility call is attributable — 400 otherwise.
+    """
+    try:
+        verdict = crm.set_eligibility(req.property_id, req.custody_date,
+                                      reviewed=req.reviewed, reviewer=req.reviewer,
+                                      evidence=req.evidence)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
     if verdict is None:
         raise HTTPException(404, "Prospect not found")
     return {"success": True, "eligibility": verdict}
+
+
+@app.get("/verification/worklist")
+def verification_worklist():
+    """Records needing a verified custody date before an agreement is possible."""
+    from verification_queue import build_worklist
+    return {"worklist": build_worklist(crm)}
 
 
 @app.post("/crm/suppress")
