@@ -19,9 +19,11 @@ from outreach_generator import generate_scripts, SuppressedProspectError
 from contract_generator import generate_contract
 from followup_engine import build_action_queue
 from seed_from_csv import build_search_urls, parse_amount, find_col, COL_MAP, deterministic_id
+from reply_classifier import classify, process_reply
+from outbox import Outbox
 import compliance
 
-app = FastAPI(title="HeirBud API", version="2.1")
+app = FastAPI(title="HeirBud API", version="2.2")
 
 # CORS + auth are configurable via env so the default is not wide-open.
 # HEIRBUD_ORIGINS: comma-separated allowlist (default: localhost dev only).
@@ -45,6 +47,7 @@ def require_key(x_api_key: str | None = Header(default=None)):
 
 
 crm = HeirBudCRM()
+outbox = Outbox(crm)
 
 
 # ── MODELS ──
@@ -101,6 +104,25 @@ class EligibilityReq(BaseModel):
 class SuppressReq(BaseModel):
     property_id: str
     reason: str = ""
+
+
+class ReplyReq(BaseModel):
+    property_id: str
+    text: str
+
+
+class OutboxDraftReq(BaseModel):
+    property_id: str
+    channel: str = "email"
+
+
+class OutboxApproveReq(BaseModel):
+    outbox_id: int
+    approver: str
+
+
+class OutboxSendReq(BaseModel):
+    daily_cap: int = 50
 
 
 # ── ENDPOINTS ──
@@ -222,6 +244,55 @@ def verification_worklist():
     """Records needing a verified custody date before an agreement is possible."""
     from verification_queue import build_worklist
     return {"worklist": build_worklist(crm)}
+
+
+# ── REPLIES ──
+@app.post("/replies/classify")
+def classify_reply(req: ReplyReq):
+    """Classify a reply without changing anything (preview)."""
+    return classify(req.text).as_dict()
+
+
+@app.post("/replies/process")
+def process_reply_endpoint(req: ReplyReq, _=Depends(require_key)):
+    """Classify a reply and take only the SAFE automatic action (auto-suppress
+    on opt-out, advance on interest/question). Ambiguous → flagged for a human."""
+    result = process_reply(crm, req.property_id, req.text)
+    if result.get("error"):
+        raise HTTPException(404, "Prospect not found")
+    return result
+
+
+# ── OUTBOX (approve-to-send) ──
+@app.post("/outbox/draft")
+def outbox_draft(req: OutboxDraftReq, _=Depends(require_key)):
+    """Queue a compliant draft (refuses suppressed records)."""
+    try:
+        oid = outbox.queue_draft(req.property_id, req.channel)
+    except SuppressedProspectError as e:
+        raise HTTPException(409, str(e))
+    except ValueError as e:
+        raise HTTPException(404, str(e))
+    return {"success": True, "outbox_id": oid}
+
+
+@app.post("/outbox/approve")
+def outbox_approve(req: OutboxApproveReq, _=Depends(require_key)):
+    """Human approval — required before anything can send."""
+    if not outbox.approve(req.outbox_id, req.approver):
+        raise HTTPException(409, "Draft not found, not in DRAFT state, or record suppressed")
+    return {"success": True}
+
+
+@app.post("/outbox/send")
+def outbox_send(req: OutboxSendReq, _=Depends(require_key)):
+    """Send everything APPROVED (dry-run sender by default — no live mail)."""
+    return outbox.send_approved(daily_cap=req.daily_cap)
+
+
+@app.get("/outbox")
+def outbox_list(status: str | None = None):
+    return {"outbox": outbox.list_outbox(status=status)}
 
 
 @app.post("/crm/suppress")

@@ -22,6 +22,8 @@ from contract_generator import generate_contract
 from followup_engine import build_action_queue, render_markdown
 from seed_from_csv import (build_search_urls, parse_amount, find_col,
                            deterministic_id, COL_MAP)
+from outbox import Outbox, DryRunSender
+import reply_classifier as rc
 import csv
 
 DEMO_DB = Path(__file__).parent / "heirbud_demo.db"
@@ -153,8 +155,20 @@ def main():
     info(f"Value ${gp['amount']:,.0f} → fee (10%) ${fee:,.0f} → net to owner ${gp['amount']-fee:,.0f}")
     crm.update_stage(gp["property_id"], "AGREEMENT_SENT", "demo: agreement generated")
 
-    # ── 7. Suppression (opt-out is terminal) ────────────────────────────────
-    banner(7, "Suppress a record (opt-out removes it from everything)")
+    # ── 7. Outbox: nothing sends without a human approval ───────────────────
+    banner(7, "Queue outreach in the outbox (approve-to-send, dry-run sender)")
+    ob = Outbox(crm)
+    draft_pid = elig_ids[2]
+    oid = ob.queue_draft(draft_pid, "email")
+    ok(f"Draft #{oid} queued for {crm.get_prospect(draft_pid)['name']}")
+    r = ob.send_approved(sender=DryRunSender())
+    block(f"send with no approval → sent {r['sent']} (a DRAFT can never go out)")
+    ob.approve(oid, "zack")
+    r = ob.send_approved(sender=DryRunSender())
+    ok(f"after human approval → sent {r['sent']} (dry-run: no real mail left the building)")
+
+    # ── 8. Suppression (opt-out is terminal) ────────────────────────────────
+    banner(8, "Suppress a record (opt-out removes it from everything)")
     sp = crm.get_prospect(elig_ids[1])
     crm.suppress(sp["property_id"], "demo: recipient asked to stop")
     ok(f"{sp['name']} suppressed")
@@ -164,8 +178,23 @@ def main():
     except SuppressedProspectError:
         block(f"outreach for {sp['name']} refused — record is suppressed")
 
-    # ── 8. Daily action queue (the autonomy layer) ──────────────────────────
-    banner(8, "Build the daily action queue (excludes suppressed)")
+    # ── 9. Inbound replies: auto-sort, safe actions only ────────────────────
+    banner(9, "Classify inbound replies (auto-suppress opt-outs, flag real leads)")
+    replies = {
+        elig_ids[3]: "Please STOP emailing me.",
+        elig_ids[4]: "Yes, please send me the details.",
+        elig_ids[5]: "Is this a scam? How do I know it's real?",
+    }
+    for pid, text in replies.items():
+        res = rc.process_reply(crm, pid, text)
+        cat = res["classification"]["category"]
+        who = crm.get_prospect(pid)["name"]
+        line = f"{who}: “{text}” → {cat} · {res['action_taken']}"
+        (block if res["action_taken"] == "suppressed" else ok)(line)
+    info("Opt-outs auto-suppressed; interested/questions flagged for a human — never auto-sent")
+
+    # ── 10. Daily action queue (the autonomy layer) ─────────────────────────
+    banner(10, "Build the daily action queue (excludes suppressed)")
     actions = build_action_queue(crm)
     suppressed_in_queue = any(a["property_id"] == sp["property_id"] for a in actions)
     ok(f"{len(actions)} actions queued; suppressed record present: {suppressed_in_queue}")

@@ -141,10 +141,16 @@ pilot the audit asks for, minus real records.
    required evidence + reviewer so every eligibility decision is attributable.
    (WI has no machine API for this, so the lookup stays human — but fast,
    prioritized, and auditable. If/when a data feed exists, it drops in here.)
-3. **Then:** connect email send (Gmail API / dedicated domain) behind an
-   "approve" button — see `docs/EMAIL_TEMPLATE_LIBRARY.md` deliverability rules.
-4. **Later:** reply-classification + next-best-action suggestions (AI recommends,
-   you authorize).
+3. **Now (rails built):** the outbox (`outbox.py`) is an approve-to-send queue —
+   drafts are compliant, nothing sends without a human approval, suppressed
+   records are refused, and a daily cap is enforced. It ships with a dry-run
+   sender; wiring a real one (Gmail API / dedicated domain, per the deliverability
+   rules in `docs/EMAIL_TEMPLATE_LIBRARY.md`) is a deliberate later step gated on
+   legal sign-off.
+4. **Now (built):** reply classification (`reply_classifier.py`) auto-sorts
+   inbound mail — opt-outs auto-suppress, real leads advance and are flagged for a
+   human, bounces are ignored. Rule-based and deterministic on purpose: the
+   opt-out decision must never depend on a model's mood.
 5. **Scale:** add a state rule-pack per new state (fee cap, waiting period,
    registration, disclosures) — schema-driven, never copy-pasted.
 
