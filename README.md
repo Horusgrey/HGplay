@@ -16,9 +16,23 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 
 | File | What it is |
 |------|-----------|
+| `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prospect table. Theme-aware. |
 | `heirfinder_v1.html` | Standalone single-file tool — AI enrichment, outreach emails, localStorage. No server. |
-| `heirbud_v2.html` | Full dashboard — connects to the FastAPI backend, CSV import, batch outreach, pipeline. |
+| `heirbud_v2.html` | Earlier dashboard — connects to the FastAPI backend, CSV import, batch outreach, pipeline. |
 | `heirbud_command_deck.html` | Command-deck interface (compliance-aware build). |
+
+### Operator console
+
+```bash
+uvicorn heirbud_server:app --port 8001
+# then open http://localhost:8001/  ← the console, served same-origin (no CORS setup)
+```
+
+One glance shows the whole operation: eligible value vs published value (kept
+distinct — published is never treated as booked revenue), the custody
+verification worklist, the outbox awaiting your approval, and today's actions.
+Every money/legal action (verify, suppress, approve-to-send) is one click and,
+where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header.
 
 ## Backend Stack
 

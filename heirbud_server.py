@@ -126,6 +126,15 @@ class OutboxSendReq(BaseModel):
 
 
 # ── ENDPOINTS ──
+@app.get("/", include_in_schema=False)
+def console():
+    """Serve the operator console same-origin (no CORS needed)."""
+    path = Path(__file__).parent / "heirbud_console.html"
+    if not path.exists():
+        raise HTTPException(404, "heirbud_console.html not found")
+    return FileResponse(str(path), media_type="text/html")
+
+
 @app.get("/health")
 def health():
     s = crm.get_pipeline_summary()

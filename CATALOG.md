@@ -30,8 +30,9 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 ### Frontends
 | File | Purpose |
 |------|---------|
+| `heirbud_console.html` | **Operator console** — served at `/`, one-glance pipeline/worklist/outbox/actions |
 | `heirfinder_v1.html` | Standalone tool (localStorage, AI enrichment) |
-| `heirbud_v2.html` | Full dashboard (connects to FastAPI) |
+| `heirbud_v2.html` | Earlier dashboard (connects to FastAPI) |
 | `heirbud_command_deck.html` | Command-deck interface |
 
 ### Docs
