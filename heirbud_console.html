@@ -98,6 +98,28 @@
     border-radius:7px;padding:7px 9px;color:var(--ink);font:inherit}
   pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
     background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin:0}
+  .analytics{padding:14px 16px 18px}
+  .an-narrative{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .an-narrative .ins{display:flex;gap:9px;font-size:13px;line-height:1.5}
+  .an-narrative .ins::before{content:"▸";color:var(--accent);flex-shrink:0}
+  .an-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:820px){.an-cols{grid-template-columns:1fr}}
+  .an-h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:8px}
+  .rung{margin-bottom:9px}
+  .rung .rtop{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+  .rung .rtop .rl{color:var(--dim)}
+  .rung .rtop .rv{font-variant-numeric:tabular-nums;font-weight:650}
+  .rung .rbar{height:14px;border-radius:4px;min-width:3px}
+  .rung.published .rbar{background:var(--info)}
+  .rung.eligible .rbar{background:var(--accent)}
+  .rung.expected .rbar{background:var(--warn)}
+  .rung.realized .rbar{background:var(--ink);opacity:.75}
+  .fn{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:5px}
+  .fn .fname{width:112px;color:var(--dim);flex-shrink:0}
+  .fn .fbar{height:14px;border-radius:4px;background:var(--accent);min-width:2px;opacity:.85}
+  .fn .fn-n{font-variant-numeric:tabular-nums;font-weight:600;width:26px}
+  .fn .fn-c{color:var(--dim);font-size:11px}
+  .fn.leak .fn-c{color:var(--warn);font-weight:600}
 </style>
 </head>
 <body>
@@ -140,6 +162,23 @@
         <span class="pill warn">nothing sends without approval</span>
       </div>
       <div class="body" id="outbox"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>From list to money — the funnel's story</h2>
+    <div class="analytics" id="analytics">
+      <div class="an-narrative" id="narrative"></div>
+      <div class="an-cols">
+        <div>
+          <div class="an-h">Value ladder</div>
+          <div id="ladder"></div>
+        </div>
+        <div>
+          <div class="an-h">Funnel — reached each stage</div>
+          <div id="funnel"></div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -194,9 +233,9 @@ function eligPill(p){
 
 async function loadAll(){
   try{
-    const [sum,acts,work,ob,pros]=await Promise.all([
+    const [sum,acts,work,ob,pros,an]=await Promise.all([
       api('/pipeline/summary'),api('/actions/today'),api('/verification/worklist'),
-      api('/outbox'),api('/prospects')
+      api('/outbox'),api('/prospects'),api('/analytics/summary')
     ]);
     $('#statusDot').classList.add('ok');$('#statusText').textContent='connected';
     PROSPECTS=pros.prospects;
@@ -205,6 +244,7 @@ async function loadAll(){
     renderActions(acts.actions);
     renderWorklist(work.worklist);
     renderOutbox(ob.outbox);
+    renderAnalytics(an);
     renderStageFilter(sum);
     renderProspects();
   }catch(e){
@@ -276,6 +316,30 @@ function renderOutbox(ob){
       </div>
     </div></div>`;}).join(''):'<div class="empty">No drafts queued. Queue one from a prospect below.</div>';
   window._OB=ob;
+}
+
+function renderAnalytics(an){
+  $('#narrative').innerHTML=an.narrative.map(s=>`<div class="ins">${esc(s)}</div>`).join('');
+  const vl=an.value_ladder, max=Math.max(1,vl.published_value);
+  const rungs=[
+    ['published','Published value',vl.published_value,'not revenue'],
+    ['eligible','Eligible value',vl.eligible_value,`${vl.eligible_pct_of_published}% of published`],
+    ['expected','Expected fee (10%)',vl.expected_fee,'if all eligible recover'],
+    ['realized','Realized fee',vl.realized_fee,'actually paid'],
+  ];
+  $('#ladder').innerHTML=rungs.map(([c,l,v,note])=>`
+    <div class="rung ${c}">
+      <div class="rtop"><span class="rl">${l} · <span style="opacity:.8">${note}</span></span><span class="rv">${fmt(v)}</span></div>
+      <div class="rbar" style="width:${Math.max(v?3:0,(v/max*100)).toFixed(1)}%"></div>
+    </div>`).join('');
+  const fmax=Math.max(1,...an.funnel.map(f=>f.reached));
+  $('#funnel').innerHTML=an.funnel.map((f,i)=>{
+    const leak=i>0 && f.step_conversion_pct<100 && f.reached>0;
+    const conv=i===0?'start':`${f.step_conversion_pct}%`;
+    return `<div class="fn ${leak?'leak':''}"><span class="fname">${f.stage}</span>
+      <span class="fbar" style="width:${Math.max(f.reached?6:0,(f.reached/fmax*100)).toFixed(0)}%"></span>
+      <span class="fn-n">${f.reached}</span><span class="fn-c">${conv}</span></div>`;
+  }).join('');
 }
 
 function renderStageFilter(sum){

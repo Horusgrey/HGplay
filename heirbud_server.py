@@ -362,6 +362,13 @@ def pipeline_summary():
     return crm.get_pipeline_summary()
 
 
+@app.get("/analytics/summary")
+def analytics_summary():
+    """Funnel, value ladder, compliance metrics, cycle times, and the narrative."""
+    from analytics import summary
+    return summary(crm)
+
+
 @app.get("/actions/today")
 def todays_actions():
     """The autonomy endpoint — prioritized daily action queue."""

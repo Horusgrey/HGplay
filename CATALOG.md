@@ -19,6 +19,7 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `contract_generator.py` | Agreement PDFs — refuses to render unless eligible |
 | `followup_engine.py` | Daily prioritized action queue (autonomy layer) |
 | `verification_queue.py` | Custody-date verification worklist — prioritized, evidence-tracked |
+| `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |

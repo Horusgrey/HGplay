@@ -46,6 +46,7 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `contract_generator.py` | One-page agreement PDFs — refuses to render unless eligible (reportlab) |
 | `followup_engine.py` | Daily prioritized action queue — run every morning |
 | `verification_queue.py` | Custody-date verification worklist — record eligibility with evidence |
+| `analytics.py` | Funnel + value ladder + cycle times + plain-English narrative |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |
 | `outbox.py` | Approve-to-send queue — nothing sends without human approval (dry-run sender) |
 | `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
@@ -122,6 +123,7 @@ records can never be resurrected by auto-advance.
 - `POST /contract/generate` — PDF agreement (422 if not eligible)
 - `POST /replies/process` — classify an inbound reply + take the safe auto-action
 - `POST /outbox/draft` → `POST /outbox/approve` → `POST /outbox/send` — approve-to-send flow
+- `GET /analytics/summary` — funnel, value ladder, cycle times, narrative
 - `GET /pipeline/summary` — stage counts and total pipeline value
 
 ## Tests

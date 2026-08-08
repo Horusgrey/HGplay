@@ -264,6 +264,17 @@ class HeirBudCRM:
                 self.update_stage(property_id, auto[outcome], f"Auto: {outcome}")
         return True
 
+    def get_stage_history(self, property_id: str | None = None) -> list[dict]:
+        """Stage transitions, oldest first. All prospects, or one if given."""
+        q = "SELECT property_id, from_stage, to_stage, notes, changed_at FROM stage_history"
+        args = []
+        if property_id:
+            q += " WHERE property_id=?"
+            args.append(str(property_id))
+        q += " ORDER BY changed_at"
+        with self._conn() as c:
+            return [dict(r) for r in c.execute(q, args).fetchall()]
+
     def get_contact_log(self, property_id: str) -> list[dict]:
         with self._conn() as c:
             rows = c.execute("""SELECT method, outcome, notes, logged_at as date
