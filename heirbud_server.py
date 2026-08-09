@@ -135,6 +135,60 @@ def console():
     return FileResponse(str(path), media_type="text/html")
 
 
+@app.get("/verify", include_in_schema=False)
+def owner_portal_page():
+    """The owner-facing trust page (proof-first self-service)."""
+    path = Path(__file__).parent / "owner_portal.html"
+    if not path.exists():
+        raise HTTPException(404, "owner_portal.html not found")
+    return FileResponse(str(path), media_type="text/html")
+
+
+def _owner_view(p: dict) -> dict:
+    """The minimal, owner-safe subset of a record. No internal notes/contacts."""
+    addr = p.get("last_known_address", "")
+    city = addr.split(",")[1].strip() if addr.count(",") >= 1 else ""
+    return {
+        "property_id": p["property_id"],
+        "first_name": (p.get("name") or "").split(" ")[0],
+        "holder": p.get("holder", ""),
+        "property_type": p.get("property_type", ""),
+        "amount": p.get("amount", 0),
+        "city": city,
+        "state_portal": compliance.STATE_PORTAL,
+        "state_phone": compliance.STATE_PHONE,
+        "fee_pct": compliance.compliant_fee_pct(),
+        "disclosure": compliance.FREE_CLAIM_DISCLOSURE,
+        "suppressed": p.get("suppression_status") == "SUPPRESSED",
+    }
+
+
+@app.get("/owner/{token}")
+def owner_lookup(token: str):
+    """Owner-facing record lookup. In production `token` is a signed, single-record
+    token emailed to the owner — never an enumerable ID. Prototype uses property_id."""
+    p = crm.get_prospect(token)
+    if not p:
+        raise HTTPException(404, "No matching record")
+    return _owner_view(p)
+
+
+@app.post("/owner/{token}/request-help")
+def owner_request_help(token: str):
+    """Owner opted in to optional assistance."""
+    if not crm.record_consent(token, source="owner-portal"):
+        raise HTTPException(409, "Record not found or opted out")
+    return {"success": True}
+
+
+@app.post("/owner/{token}/not-me")
+def owner_not_me(token: str):
+    """Owner says it's not them / stop — suppress immediately."""
+    if not crm.suppress(token, "Owner via portal: not me / stop"):
+        raise HTTPException(404, "Record not found")
+    return {"success": True}
+
+
 @app.get("/health")
 def health():
     s = crm.get_pipeline_summary()
@@ -144,7 +198,20 @@ def health():
 
 @app.get("/prospects")
 def list_prospects(stage: str | None = None, min_amount: float | None = None):
-    return {"prospects": crm.get_all_prospects(stage=stage, min_amount=min_amount)}
+    from scoring import score_prospect
+    ps = crm.get_all_prospects(stage=stage, min_amount=min_amount)
+    for p in ps:                      # attach priority score + track for the console
+        lead = score_prospect(p)
+        p["score"], p["segment"], p["track"] = lead.score, lead.segment, lead.track
+        p["expected_fee"] = lead.expected_fee
+    return {"prospects": ps}
+
+
+@app.get("/leads/prioritized")
+def leads_prioritized(limit: int = 25):
+    """Prospects ranked by expected, collectible fee — the strategic worklist."""
+    from scoring import prioritize
+    return {"leads": prioritize(crm.get_all_prospects(), limit=limit)}
 
 
 @app.get("/prospects/{property_id}")

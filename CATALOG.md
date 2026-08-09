@@ -20,6 +20,7 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `followup_engine.py` | Daily prioritized action queue (autonomy layer) |
 | `verification_queue.py` | Custody-date verification worklist — prioritized, evidence-tracked |
 | `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
+| `scoring.py` | Lead prioritization — value×eligibility×contact×fit, segment + recommended track |
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
@@ -31,7 +32,8 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 ### Frontends
 | File | Purpose |
 |------|---------|
-| `heirbud_console.html` | **Operator console** — served at `/`, one-glance pipeline/worklist/outbox/actions |
+| `heirbud_console.html` | **Operator console** — served at `/`, pipeline/worklist/outbox/actions/analytics/priority |
+| `owner_portal.html` | **Owner trust page** — served at `/verify`, proof-first self-service |
 | `heirfinder_v1.html` | Standalone tool (localStorage, AI enrichment) |
 | `heirbud_v2.html` | Earlier dashboard (connects to FastAPI) |
 | `heirbud_command_deck.html` | Command-deck interface |
@@ -39,7 +41,9 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 ### Docs
 | File | Purpose |
 |------|---------|
+| `STRATEGY.md` | Business strategy — trust-as-moat, segmentation, expansion, unit economics, funding the portfolio |
 | `AUTONOMOUS_SYSTEM.md` | The autonomous money-maker design + revenue model |
+| `docs/LEGAL_REVIEW_BRIEF.md` | Scope-of-review brief to hand a Wisconsin attorney |
 | `docs/EMAIL_TEMPLATE_LIBRARY.md` | Proof-first outreach copy + deliverability rules |
 | `docs/LEGAL_TEMPLATES_COMPLIANCE.md` | Per-state agreement templates + compliance ref |
 | `docs/governance/HB-00_START_HERE.md` | Project mission + operating rules |

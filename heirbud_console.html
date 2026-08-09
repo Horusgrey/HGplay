@@ -192,7 +192,7 @@
     <div class="body" style="max-height:none;padding:0">
       <table>
         <thead><tr>
-          <th>Name</th><th>Amount</th><th>Stage</th><th>Eligibility</th><th>Contact</th><th>Actions</th>
+          <th>Name</th><th>Amount</th><th>Priority</th><th>Stage</th><th>Eligibility</th><th>Contact</th><th>Actions</th>
         </tr></thead>
         <tbody id="prospects"></tbody>
       </table>
@@ -349,17 +349,23 @@ function renderStageFilter(sum){
   sel.value=cur;
 }
 
+const TRACK_CLS={'FAST TRACK':'ok','SELF-SERVE NUDGE':'','VERIFY FIRST':'warn','SUPPRESSED':'danger'};
+function trackPill(t){const c=t&&t.startsWith('PREMIUM')?'info':(TRACK_CLS[t]??'');
+  return `<span class="pill ${c}">${esc(t||'—')}</span>`;}
 function renderProspects(){
   const stage=$('#stageFilter').value, q=$('#search').value.toLowerCase();
   let rows=PROSPECTS.filter(p=>(!stage||p.stage===stage)&&
     (!q||(p.name||'').toLowerCase().includes(q)||(p.holder||'').toLowerCase().includes(q)));
-  rows.sort((a,b)=>b.amount-a.amount);
-  $('#rowsInfo').textContent=rows.length+' shown';
+  rows.sort((a,b)=>(b.expected_fee-a.expected_fee)||(b.score-a.score));  // strategic order
+  $('#rowsInfo').textContent=rows.length+' shown · ranked by expected fee';
   $('#prospects').innerHTML=rows.length?rows.map(p=>{
     const supp=p.suppression_status==='SUPPRESSED';
     return `<tr>
-      <td><b>${esc(p.name)}</b><div class="meta" style="font-size:11px;color:var(--dim)">${esc(p.holder||'')}</div></td>
+      <td><b>${esc(p.name)}</b><div class="meta" style="font-size:11px;color:var(--dim)">${esc(p.holder||'')} · ${esc(p.segment||'')}</div></td>
       <td class="amt">${fmt(p.amount)}</td>
+      <td><div style="display:flex;flex-direction:column;gap:3px">
+        <span class="amt" title="expected collectible fee">${fmt(p.expected_fee)} <span style="font-weight:400;color:var(--dim);font-size:11px">(${(p.score??0).toFixed(0)})</span></span>
+        ${trackPill(p.track)}</div></td>
       <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span></td>
       <td>${eligPill(p)}</td>
       <td>${esc(p.phone||p.email||'—')}</td>
@@ -368,7 +374,7 @@ function renderProspects(){
         <button onclick="draft('${p.property_id}')" ${supp||!(p.email)?'disabled':''}>Queue email</button>
         <button class="danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Suppress</button>
       </div></td>
-    </tr>`;}).join(''):'<tr><td colspan="6" class="empty">No matching prospects</td></tr>';
+    </tr>`;}).join(''):'<tr><td colspan="7" class="empty">No matching prospects</td></tr>';
 }
 $('#stageFilter').onchange=renderProspects; $('#search').oninput=renderProspects;
 

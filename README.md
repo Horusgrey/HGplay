@@ -4,9 +4,10 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 
 > **Compliance-first (PRJ-HB7K4).** Fees are capped at the Wisconsin 10% ceiling
 > and agreements are gated behind a verified 24-month custody check — enforced in
-> code via `compliance.py`, not just documented. Read **`AUTONOMOUS_SYSTEM.md`**
-> for how the safe-automation architecture works, and **`docs/governance/`** for
-> the project canon (Start Here, Scope Audit, Master Control).
+> code via `compliance.py`, not just documented. Read **`STRATEGY.md`** for the
+> business thinking, **`AUTONOMOUS_SYSTEM.md`** for the safe-automation
+> architecture, **`docs/LEGAL_REVIEW_BRIEF.md`** for the lawyer hand-off, and
+> **`docs/governance/`** for the project canon (Start Here, Scope Audit, Master Control).
 >
 > Status: **prototype — run locally on synthetic data.** Legal sign-off, real
 > auth, and a supervised pilot are required before live paid outreach. See the
@@ -16,7 +17,8 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 
 | File | What it is |
 |------|-----------|
-| `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prospect table. Theme-aware. |
+| `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prioritized prospect table, funnel analytics. Theme-aware. |
+| `owner_portal.html` | **Owner-facing trust page** — served at `/verify?id=…`. Owners verify their own record, see the free state path front-and-center, opt in or opt out. |
 | `heirfinder_v1.html` | Standalone single-file tool — AI enrichment, outreach emails, localStorage. No server. |
 | `heirbud_v2.html` | Earlier dashboard — connects to the FastAPI backend, CSV import, batch outreach, pipeline. |
 | `heirbud_command_deck.html` | Command-deck interface (compliance-aware build). |
@@ -47,6 +49,7 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `followup_engine.py` | Daily prioritized action queue — run every morning |
 | `verification_queue.py` | Custody-date verification worklist — record eligibility with evidence |
 | `analytics.py` | Funnel + value ladder + cycle times + plain-English narrative |
+| `scoring.py` | Principled lead prioritization — value×eligibility×contact×fit, segment + track |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |
 | `outbox.py` | Approve-to-send queue — nothing sends without human approval (dry-run sender) |
 | `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
@@ -124,6 +127,8 @@ records can never be resurrected by auto-advance.
 - `POST /replies/process` — classify an inbound reply + take the safe auto-action
 - `POST /outbox/draft` → `POST /outbox/approve` → `POST /outbox/send` — approve-to-send flow
 - `GET /analytics/summary` — funnel, value ladder, cycle times, narrative
+- `GET /leads/prioritized` — prospects ranked by expected collectible fee
+- `GET /owner/{token}` · `POST /owner/{token}/request-help` · `/not-me` — owner portal
 - `GET /pipeline/summary` — stage counts and total pipeline value
 
 ## Tests

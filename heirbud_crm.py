@@ -231,6 +231,22 @@ class HeirBudCRM:
         self.update_stage(property_id, "SUPPRESSED", reason or "Suppressed")
         return True
 
+    def record_consent(self, property_id: str, source: str = "owner-portal") -> bool:
+        """Owner opted IN to assistance. Records consent and moves to RESPONDED.
+
+        Refused for suppressed records — an opt-out is never overridden.
+        """
+        p = self.get_prospect(property_id)
+        if not p or p.get("suppression_status") == "SUPPRESSED":
+            return False
+        self.update_prospect(property_id, consent_status="GIVEN")
+        # Neutral outcome so we control the transition (no accidental double-advance).
+        self.log_contact_attempt(property_id, source, "Consent Given",
+                                 "Owner requested assistance")
+        if p["stage"] not in ("CLOSED",) and STAGES.index("RESPONDED") > STAGES.index(p["stage"]):
+            self.update_stage(property_id, "RESPONDED", "Owner requested help via portal")
+        return True
+
     # ── STAGE ──
     def update_stage(self, property_id: str, stage: str, notes: str = "") -> bool:
         if stage not in STAGES:
