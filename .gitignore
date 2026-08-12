@@ -4,7 +4,9 @@ __pycache__/
 heirbud.db
 heirbud.db-journal
 contracts/
+letters/
 TODAY_ACTIONS.md
+CUSTODY_VERIFY.md
 
 # Real unclaimed-property exports — keep owner data OUT of the repo (PRJ-HB7K4).
 # Use synthetic fixtures for development/demos instead.

@@ -17,6 +17,7 @@ import io
 from heirbud_crm import HeirBudCRM, STAGES
 from outreach_generator import generate_scripts, SuppressedProspectError
 from contract_generator import generate_contract
+from letter_generator import generate_letter
 from followup_engine import build_action_queue
 from seed_from_csv import build_search_urls, parse_amount, find_col, COL_MAP, deterministic_id
 from reply_classifier import classify, process_reply
@@ -104,6 +105,16 @@ class EligibilityReq(BaseModel):
 class SuppressReq(BaseModel):
     property_id: str
     reason: str = ""
+
+
+class ModeReq(BaseModel):
+    property_id: str
+    fee_model: str                 # CONTRACT | GRATUITY
+
+
+class LetterReq(BaseModel):
+    property_id: str
+    mode: str | None = None        # override; defaults to the prospect's fee_model
 
 
 class ReplyReq(BaseModel):
@@ -377,6 +388,44 @@ def suppress(req: SuppressReq, _=Depends(require_key)):
     if not crm.suppress(req.property_id, req.reason):
         raise HTTPException(404, "Prospect not found")
     return {"success": True}
+
+
+@app.post("/prospects/mode")
+def set_mode(req: ModeReq, _=Depends(require_key)):
+    """Toggle a prospect between CONTRACT and GRATUITY fee models."""
+    m = req.fee_model.upper()
+    if m not in ("CONTRACT", "GRATUITY"):
+        raise HTTPException(400, "fee_model must be CONTRACT or GRATUITY")
+    if not crm.update_prospect(req.property_id, fee_model=m):
+        raise HTTPException(404, "Prospect not found")
+    return {"success": True, "fee_model": m}
+
+
+@app.post("/letter/generate")
+def letter(req: LetterReq, _=Depends(require_key)):
+    """Generate a USPS-ready letter PDF in the prospect's mode (or an override)."""
+    p = crm.get_prospect(req.property_id)
+    if not p:
+        raise HTTPException(404, "Prospect not found")
+    if p.get("suppression_status") == "SUPPRESSED":
+        raise HTTPException(409, "Record is suppressed — no outreach permitted")
+    mode = (req.mode or p.get("fee_model") or "CONTRACT").upper()
+    path = generate_letter(p, mode=mode)
+    crm.log_contact_attempt(req.property_id, "Letter", "Sent", f"{mode.title()} letter generated")
+    return {"success": True, "mode": mode, "path": path,
+            "download": f"/letter/download/{p['property_id']}?mode={mode}"}
+
+
+@app.get("/letter/download/{property_id}")
+def download_letter(property_id: str, mode: str = "CONTRACT"):
+    p = crm.get_prospect(property_id)
+    if not p:
+        raise HTTPException(404, "Prospect not found")
+    safe = "".join(c if c.isalnum() else "_" for c in p["name"])
+    path = Path(__file__).parent / "letters" / f"Letter_{mode.title()}_{safe}.pdf"
+    if not path.exists():
+        raise HTTPException(404, "Letter not generated yet — POST /letter/generate first")
+    return FileResponse(str(path), media_type="application/pdf", filename=path.name)
 
 
 @app.post("/contract/generate")

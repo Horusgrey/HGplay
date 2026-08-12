@@ -107,6 +107,24 @@ def recommended_track(p: dict, seg: str, score: float) -> str:
     return "FAST TRACK"              # clean, eligible owner claim
 
 
+# Below this recovery amount, a formal contract isn't worth the friction — a
+# warm gratuity note builds goodwill and referrals and converts better.
+GRATUITY_CEILING = 2000.0
+
+
+def recommended_mode(prospect: dict) -> str:
+    """CONTRACT vs GRATUITY, chosen by situation — the operator can always override.
+
+    Small claims → GRATUITY: low friction, high trust, goodwill/referrals; the fee
+    wouldn't be worth a signed agreement anyway. Larger or complex claims →
+    CONTRACT: enough money on the line to warrant a written, enforceable fee.
+    """
+    seg = segment(prospect)
+    if seg in COMPLEX_SEGMENTS:
+        return "CONTRACT"                     # estates/trusts/business: always paper it
+    return "GRATUITY" if float(prospect.get("amount", 0)) < GRATUITY_CEILING else "CONTRACT"
+
+
 @dataclass
 class Lead:
     property_id: str
@@ -116,13 +134,14 @@ class Lead:
     score: float
     expected_fee: float
     track: str
+    mode: str = "CONTRACT"
     factors: dict = field(default_factory=dict)
 
     def as_dict(self) -> dict:
         return {"property_id": self.property_id, "name": self.name, "amount": self.amount,
                 "segment": self.segment, "score": self.score,
                 "expected_fee": self.expected_fee, "track": self.track,
-                "factors": self.factors}
+                "mode": self.mode, "factors": self.factors}
 
 
 def score_prospect(p: dict) -> Lead:
@@ -135,10 +154,12 @@ def score_prospect(p: dict) -> Lead:
     if p.get("suppression_status") == "SUPPRESSED":
         score = 0.0
     expected_fee = round(float(p.get("amount", 0)) * compliance.WI_FEE_CAP * prob, 2)
+    # An explicit per-prospect fee_model wins; otherwise recommend by situation.
+    mode = (p.get("fee_model") or recommended_mode(p)).upper()
     return Lead(
         property_id=p.get("property_id", ""), name=p.get("name", ""),
         amount=float(p.get("amount", 0)), segment=seg, score=round(score, 1),
-        expected_fee=expected_fee, track=recommended_track(p, seg, score),
+        expected_fee=expected_fee, track=recommended_track(p, seg, score), mode=mode,
         factors={"value": round(v, 2), "eligibility": round(e, 2),
                  "contact": round(c, 2), "fit": round(fit, 2),
                  "close_probability": round(prob, 2)})

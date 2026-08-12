@@ -370,6 +370,9 @@ function renderProspects(){
       <td>${eligPill(p)}</td>
       <td>${esc(p.phone||p.email||'—')}</td>
       <td><div class="btns">
+        <button onclick="toggleMode('${p.property_id}','${p.fee_model||p.mode||'CONTRACT'}')" ${supp?'disabled':''}
+          title="Toggle contract / gratuity">${(p.fee_model||p.mode)==='GRATUITY'?'🤝 Gratuity':'📄 Contract'}</button>
+        <button onclick="letter('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
         <button onclick="preview('${p.property_id}')" ${supp?'disabled':''}>Outreach</button>
         <button onclick="draft('${p.property_id}')" ${supp||!(p.email)?'disabled':''}>Queue email</button>
         <button class="danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Suppress</button>
@@ -385,6 +388,11 @@ $('#sendBtn').onclick=async()=>{try{const r=await api('/outbox/send',{method:'PO
   toast(`Sent ${r.sent} (dry-run) · held ${r.held} · capped ${r.capped}`);loadAll();}catch(e){toast(e.message);}};
 async function draft(pid){try{const r=await api('/outbox/draft',{method:'POST',body:{property_id:pid,channel:'email'}});
   toast('Draft #'+r.outbox_id+' queued — approve it in the outbox');loadAll();}catch(e){toast(e.message);}}
+async function toggleMode(pid,cur){const next=cur==='GRATUITY'?'CONTRACT':'GRATUITY';
+  try{await api('/prospects/mode',{method:'POST',body:{property_id:pid,fee_model:next}});
+    toast('Mode → '+next);loadAll();}catch(e){toast(e.message);}}
+async function letter(pid){try{const r=await api('/letter/generate',{method:'POST',body:{property_id:pid}});
+  toast(r.mode+' letter ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
 async function suppress(pid){if(!confirm('Suppress this record? This is terminal — no further outreach.'))return;
   try{await api('/crm/suppress',{method:'POST',body:{property_id:pid,reason:'console'}});toast('Suppressed');loadAll();}catch(e){toast(e.message);}}
 

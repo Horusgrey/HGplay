@@ -27,6 +27,7 @@ COMPLIANCE_COLUMNS = {
     "source_verified_date": "TEXT",     # when the state record was re-verified
     "custody_evidence": "TEXT DEFAULT ''",  # how custody date was confirmed (source/url/note)
     "report_year": "TEXT",              # HINT ONLY — not a substitute for custody_date
+    "fee_model": "TEXT DEFAULT 'CONTRACT'",  # CONTRACT | GRATUITY (per-prospect override)
 }
 
 
@@ -63,6 +64,7 @@ class HeirBudCRM:
                 source_verified_date TEXT,
                 custody_evidence TEXT DEFAULT '',
                 report_year TEXT,
+                fee_model TEXT DEFAULT 'CONTRACT',
                 created_at TEXT,
                 updated_at TEXT
             )""")
@@ -102,9 +104,9 @@ class HeirBudCRM:
                      holder, priority, stage, phone, email, notes, search_urls,
                      custody_date, eligibility_reviewed, eligibility_reason,
                      consent_status, suppression_status, source_verified_date,
-                     custody_evidence, report_year,
+                     custody_evidence, report_year, fee_model,
                      created_at, updated_at)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
                     (str(p["property_id"]), p["name"], p.get("last_known_address", ""),
                      float(p.get("amount", 0)), p.get("property_type", ""),
                      p.get("holder", ""), p.get("priority", "MEDIUM"),
@@ -114,6 +116,7 @@ class HeirBudCRM:
                      p.get("eligibility_reason", ""), p.get("consent_status", "NONE"),
                      p.get("suppression_status", "ACTIVE"), p.get("source_verified_date"),
                      p.get("custody_evidence", ""), p.get("report_year"),
+                     p.get("fee_model", "CONTRACT"),
                      now, now))
             return True
         except sqlite3.IntegrityError:
@@ -144,7 +147,7 @@ class HeirBudCRM:
                    "priority", "phone", "email", "notes", "search_urls",
                    "custody_date", "eligibility_reviewed", "eligibility_reason",
                    "consent_status", "suppression_status", "source_verified_date",
-                   "custody_evidence", "report_year"}
+                   "custody_evidence", "report_year", "fee_model"}
         sets, args = [], []
         for k, v in fields.items():
             if k in allowed:
