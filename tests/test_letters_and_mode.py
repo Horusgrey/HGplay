@@ -50,6 +50,18 @@ def test_invalid_mode_rejected():
         lg.letter_text({"name": "X"}, "SHARKY")
 
 
+def test_verify_url_built_from_property_id(monkeypatch):
+    monkeypatch.setattr(lg, "BASE_URL", "https://claim.example")
+    assert lg.verify_url({"property_id": "WI-1"}) == "https://claim.example/verify?id=WI-1"
+    assert lg.verify_url({"name": "no id"}) is None
+
+
+def test_letter_invites_scan_when_record_has_id():
+    txt = lg.letter_text({"name": "Dan", "amount": 5000, "property_id": "WI-9"}, "CONTRACT")
+    assert "scan the code" in txt.lower()
+
+
+
 def test_generate_letter_writes_pdf(tmp_path):
     path = lg.generate_letter({"name": "Test P", "amount": 500, "holder": "H",
                                "last_known_address": "1 A St, Madison, WI"},

@@ -17,17 +17,27 @@ The mode is chosen per prospect (see scoring.recommended_mode) or set globally.
 USPS-first is deliberate: a real letter to the last-known address establishes
 legitimacy and creates a clean record before any digital contact.
 """
+import os
 from pathlib import Path
 from datetime import datetime
+from urllib.parse import quote
 
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.units import inch
 from reportlab.lib.colors import HexColor
 from reportlab.pdfgen import canvas
+from reportlab.graphics.barcode.qr import QrCodeWidget
+from reportlab.graphics.shapes import Drawing
+from reportlab.graphics import renderPDF
 
 import compliance
 
 OUTPUT_DIR = Path(__file__).parent / "letters"
+
+# Where the owner portal lives. Set HEIRBUD_BASE_URL to your real domain before
+# mailing (e.g. https://claim.yourdomain.com). The QR on each letter points at
+# that owner's private verification page.
+BASE_URL = os.environ.get("HEIRBUD_BASE_URL", "http://localhost:8001")
 INK = HexColor("#1a1814")
 DIM = HexColor("#6b6459")
 ACCENT = HexColor("#1a5c2a")
@@ -40,6 +50,22 @@ SENDER = {
     "address": "[Your return address]",
     "contact": "[Your phone] · [Your email]",
 }
+
+
+def verify_url(prospect: dict) -> str | None:
+    """The owner's private verification link. None if there's no record id."""
+    pid = prospect.get("property_id")
+    return f"{BASE_URL}/verify?id={quote(str(pid))}" if pid else None
+
+
+def _draw_qr(c, url: str, x: float, y: float, size: float):
+    """Draw a QR code for `url` at (x, y) with side length `size`. Pure reportlab."""
+    qr = QrCodeWidget(url)
+    b = qr.getBounds()
+    w, h = b[2] - b[0], b[3] - b[1]
+    d = Drawing(size, size, transform=[size / w, 0, 0, size / h, -b[0] * size / w, -b[1] * size / h])
+    d.add(qr)
+    renderPDF.draw(d, c, x, y)
 
 
 def _wrap(text: str, width: int = 92) -> list[str]:
@@ -87,8 +113,14 @@ def _body_paragraphs(prospect: dict, mode: str) -> list[str]:
             f"anytime. I've enclosed a one-page agreement you can read over. There's no "
             f"obligation, and claiming it yourself for free is always an option.")
 
-    close = ("To confirm this is really yours, I can send you the exact state record. Just "
-             "reach out using the details below.")
+    vurl = verify_url(prospect)
+    if vurl:
+        close = ("Prefer to check online right now? Scan the code at the top of this letter "
+                 "to see your record and your options on a secure page — or reach out using "
+                 "the details below and I'll send you the exact state record.")
+    else:
+        close = ("To confirm this is really yours, I can send you the exact state record. "
+                 "Just reach out using the details below.")
     return [common_open, free_line, not_gov, offer, close]
 
 
@@ -131,6 +163,15 @@ def generate_letter(prospect: dict, mode: str = "CONTRACT", output_dir=OUTPUT_DI
     c.setFont("Helvetica", 8.5); c.setFillColor(DIM)
     c.drawString(M, y - 13, SENDER["line"])
     c.drawRightString(W - M, y, datetime.now().strftime("%B %d, %Y"))
+
+    # QR → the owner's private verification page (physical letter → digital trust).
+    vurl = verify_url(prospect)
+    if vurl:
+        qsize = 0.95 * inch
+        _draw_qr(c, vurl, W - M - qsize, y - 13 - qsize, qsize)
+        c.setFont("Helvetica", 6.8); c.setFillColor(DIM)
+        c.drawRightString(W - M, y - 13 - qsize - 9, "Scan to verify your record")
+        y -= (qsize + 4)
     y -= 40
 
     # Recipient
