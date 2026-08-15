@@ -63,12 +63,19 @@ def run(crm: HeirBudCRM) -> dict:
     waiting = [{"property_id": p["property_id"], "name": p["name"], "amount": p["amount"]}
                for p in crm.get_prospects_by_stage("RESPONDED")]
 
+    # 5) COLLECT — the money loop: invoice those who got paid, nudge the overdue.
+    from payment_module import dashboard as pay_dashboard
+    pay = pay_dashboard(crm)
+
     return {
         "generated": datetime.now().isoformat(),
         "counts": {"active": len(active), "to_find": len(to_find),
                    "to_verify": len(to_verify), "ready_to_mail": len(ready_to_mail),
-                   "replies_waiting": len(waiting)},
+                   "replies_waiting": len(waiting),
+                   "to_invoice": len(pay["to_invoice"]), "reminders_due": len(pay["reminders_due"]),
+                   "collected_fees": pay["collected_fees"]},
         "find": to_find, "verify": to_verify, "mail": ready_to_mail, "replies": waiting,
+        "collect": pay,
         "narrative": analytics_summary(crm)["narrative"],
         "top_leads": ranked[:10],
     }
@@ -90,6 +97,20 @@ def render_brief(r: dict) -> str:
         L.append("## 🔔 Replies waiting — handle these first")
         for x in r["replies"]:
             L.append(f"- **{x['name']}** (${x['amount']:,.0f}) — someone answered. Respond.")
+        L.append("")
+
+    col = r.get("collect", {})
+    if col.get("to_invoice"):
+        L.append("## 💰 Invoice these — they got their money")
+        for x in col["to_invoice"]:
+            what = "thank-you note" if x["mode"] == "GRATUITY" else f"invoice (${x['fee']:,.0f})"
+            L.append(f"- **{x['name']}** — send {what}")
+        L.append("")
+    if col.get("reminders_due"):
+        L.append("## 💵 Gentle fee reminders due")
+        for x in col["reminders_due"]:
+            L.append(f"- **{x['name']}** — reminder #{x['reminder_number']} · ${x['fee']:,.0f} · "
+                     f"{x['days_since_funds']}d since funds")
         L.append("")
 
     if r["mail"]:

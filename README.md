@@ -52,6 +52,7 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barrier model, findability, segment + track + mode |
 | `contact_finder.py` | Intelligent skip-tracing — name variants, findability score, ranked lookups, deceased→heir pivot |
 | `autopilot.py` | One command advances the whole operation and writes the operator brief |
+| `payment_module.py` | Closes the money loop — mode-aware invoice/thank-you, friendly finite reminders, reconciliation |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |
 | `outbox.py` | Approve-to-send queue — nothing sends without human approval (dry-run sender) |
 | `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
@@ -133,6 +134,7 @@ records can never be resurrected by auto-advance.
 - `GET /leads/prioritized` — prospects ranked by holistic priority (achievable first)
 - `GET /prospects/{id}/find` — intelligent skip-trace plan for one prospect
 - `GET /autopilot/brief` — run the autonomous pass, return the operator brief
+- `GET /payments/dashboard` · `POST /payments/funds-received` · `/invoice` · `/fee-paid` — the money loop
 - `GET /owner/{token}` · `POST /owner/{token}/request-help` · `/not-me` — owner portal
 - `GET /pipeline/summary` — stage counts and total pipeline value
 

@@ -18,3 +18,4 @@ WI_HeirFinder*.csv
 .env
 *.local
 OPERATOR_BRIEF.md
+invoices/

@@ -22,7 +22,8 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barriers, findability, segment/track/mode |
 | `contact_finder.py` | Skip-trace engine — name variants, findability, ranked public lookups, deceased→heir pivot |
-| `autopilot.py` | One-command autonomous pass → OPERATOR_BRIEF.md (find / verify / mail / replies) |
+| `autopilot.py` | One-command autonomous pass → OPERATOR_BRIEF.md (find / verify / mail / replies / collect) |
+| `payment_module.py` | The money loop — mode-aware invoice/thank-you, friendly finite reminders, realized-fee reconciliation |
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |

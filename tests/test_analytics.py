@@ -19,13 +19,16 @@ def test_value_ladder_keeps_figures_distinct(crm):
     assert vl["realized_fee"] == 0                   # nothing paid yet
 
 
-def test_realized_fee_only_counts_paid(crm):
+def test_realized_fee_requires_fee_actually_collected(crm):
+    # Reaching PAID (the STATE paid the owner) is NOT realized revenue —
+    # realized means the claimant paid YOUR fee.
     crm.add_prospect({"property_id": "A", "name": "A", "amount": 100000})
     crm.set_eligibility("A", "2000-01-01", reviewed=True, evidence="x")
     _advance(crm, "A", "ENRICHED", "CONTACTED", "RESPONDED", "AGREEMENT_SENT",
              "SIGNED", "FILED", "PAID")
-    vl = analytics.value_ladder(crm)
-    assert vl["realized_fee"] == 10000               # now 10% of the paid amount
+    assert analytics.value_ladder(crm)["realized_fee"] == 0   # not collected yet
+    crm.update_prospect("A", fee_paid=1)                       # claimant pays the fee
+    assert analytics.value_ladder(crm)["realized_fee"] == 10000
 
 
 def test_funnel_counts_reached_at_least_each_stage(crm):

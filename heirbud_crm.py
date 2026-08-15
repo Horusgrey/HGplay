@@ -28,6 +28,14 @@ COMPLIANCE_COLUMNS = {
     "custody_evidence": "TEXT DEFAULT ''",  # how custody date was confirmed (source/url/note)
     "report_year": "TEXT",              # HINT ONLY — not a substitute for custody_date
     "fee_model": "TEXT DEFAULT 'CONTRACT'",  # CONTRACT | GRATUITY (per-prospect override)
+    # ── Payment / fee collection (closes the money loop) ──
+    "funds_received_date": "TEXT",      # when the CLAIMANT received their money from the state
+    "fee_invoiced": "INTEGER DEFAULT 0",
+    "fee_invoice_date": "TEXT",
+    "fee_paid": "INTEGER DEFAULT 0",
+    "fee_paid_date": "TEXT",
+    "fee_reminders_sent": "INTEGER DEFAULT 0",
+    "fee_last_reminder": "TEXT",
 }
 
 
@@ -65,6 +73,13 @@ class HeirBudCRM:
                 custody_evidence TEXT DEFAULT '',
                 report_year TEXT,
                 fee_model TEXT DEFAULT 'CONTRACT',
+                funds_received_date TEXT,
+                fee_invoiced INTEGER DEFAULT 0,
+                fee_invoice_date TEXT,
+                fee_paid INTEGER DEFAULT 0,
+                fee_paid_date TEXT,
+                fee_reminders_sent INTEGER DEFAULT 0,
+                fee_last_reminder TEXT,
                 created_at TEXT,
                 updated_at TEXT
             )""")
@@ -147,7 +162,9 @@ class HeirBudCRM:
                    "priority", "phone", "email", "notes", "search_urls",
                    "custody_date", "eligibility_reviewed", "eligibility_reason",
                    "consent_status", "suppression_status", "source_verified_date",
-                   "custody_evidence", "report_year", "fee_model"}
+                   "custody_evidence", "report_year", "fee_model",
+                   "funds_received_date", "fee_invoiced", "fee_invoice_date",
+                   "fee_paid", "fee_paid_date", "fee_reminders_sent", "fee_last_reminder"}
         sets, args = [], []
         for k, v in fields.items():
             if k in allowed:
@@ -171,6 +188,8 @@ class HeirBudCRM:
         except (json.JSONDecodeError, TypeError):
             d["search_urls"] = {}
         d["eligibility_reviewed"] = bool(d.get("eligibility_reviewed"))
+        d["fee_invoiced"] = bool(d.get("fee_invoiced"))
+        d["fee_paid"] = bool(d.get("fee_paid"))
         d["contact_log"] = self.get_contact_log(d["property_id"])
         return d
 

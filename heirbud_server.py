@@ -243,6 +243,68 @@ def autopilot_brief():
     return run(crm)
 
 
+# ── PAYMENTS (the money loop) ──
+class PaymentReq(BaseModel):
+    property_id: str
+    date: str | None = None
+
+
+@app.get("/payments/dashboard")
+def payments_dashboard():
+    import payment_module
+    return payment_module.dashboard(crm)
+
+
+@app.post("/payments/funds-received")
+def funds_received(req: PaymentReq, _=Depends(require_key)):
+    """Claimant confirms they received their money → unlocks invoicing."""
+    import payment_module
+    if not payment_module.record_funds_received(crm, req.property_id, req.date):
+        raise HTTPException(404, "Prospect not found")
+    return {"success": True}
+
+
+@app.post("/payments/invoice")
+def payment_invoice(req: PaymentReq, _=Depends(require_key)):
+    """Generate the invoice (contract) or thank-you (gratuity). Requires funds received."""
+    import payment_module
+    res = payment_module.generate_invoice(crm, req.property_id)
+    if res.get("error"):
+        raise HTTPException(422 if "funds" in res["error"] else 404, res["error"])
+    return {**res, "download": f"/payments/download/{req.property_id}"}
+
+
+@app.get("/payments/download/{property_id}")
+def payment_download(property_id: str):
+    p = crm.get_prospect(property_id)
+    if not p:
+        raise HTTPException(404, "Prospect not found")
+    safe = "".join(c if c.isalnum() else "_" for c in p["name"])
+    kind = "ThankYou" if (p.get("fee_model") or "CONTRACT").upper() == "GRATUITY" else "Invoice"
+    path = Path(__file__).parent / "invoices" / f"{kind}_{safe}.pdf"
+    if not path.exists():
+        raise HTTPException(404, "Not generated yet — POST /payments/invoice first")
+    return FileResponse(str(path), media_type="application/pdf", filename=path.name)
+
+
+@app.post("/payments/fee-paid")
+def fee_paid(req: PaymentReq, _=Depends(require_key)):
+    """Record that the claimant paid your fee → realized revenue, record closed."""
+    import payment_module
+    if not payment_module.mark_fee_paid(crm, req.property_id, req.date):
+        raise HTTPException(404, "Prospect not found")
+    return {"success": True}
+
+
+@app.post("/payments/reminder-sent")
+def reminder_sent(req: PaymentReq, _=Depends(require_key)):
+    """Log that a friendly fee reminder went out (caps at the max, then stops)."""
+    import payment_module
+    if not payment_module.log_reminder_sent(crm, req.property_id):
+        raise HTTPException(404, "Prospect not found")
+    return {"success": True}
+
+
 @app.get("/prospects/{property_id}")
 def get_prospect(property_id: str):
     p = crm.get_prospect(property_id)

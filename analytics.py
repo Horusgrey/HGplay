@@ -63,12 +63,14 @@ def value_ladder(crm: HeirBudCRM) -> dict:
     ps = crm.get_all_prospects()
     published = sum(p["amount"] for p in ps)
     eligible = sum(p["amount"] for p in ps if p.get("eligibility_reviewed"))
-    paid = sum(p["amount"] for p in ps if p["stage"] in PAID_STAGES)
+    # Realized = fees you've actually COLLECTED (claimant paid the fee), not merely
+    # claims the state paid. This is the only real money.
+    realized = sum(compliance.fee_amount(p["amount"]) for p in ps if p.get("fee_paid"))
     return {
         "published_value": round(published, 2),
         "eligible_value": round(eligible, 2),
         "expected_fee": compliance.fee_amount(eligible),   # 10% of eligible
-        "realized_fee": compliance.fee_amount(paid),       # 10% of actually paid
+        "realized_fee": round(realized, 2),                # fees actually collected
         "eligible_pct_of_published": round(eligible / published * 100, 1) if published else 0.0,
     }
 

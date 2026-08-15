@@ -166,6 +166,11 @@
   </div>
 
   <div class="card">
+    <h2>Collections — the money loop <span class="count" id="colCount">$0 collected</span></h2>
+    <div class="body" id="collections"></div>
+  </div>
+
+  <div class="card">
     <h2>From list to money — the funnel's story</h2>
     <div class="analytics" id="analytics">
       <div class="an-narrative" id="narrative"></div>
@@ -233,9 +238,9 @@ function eligPill(p){
 
 async function loadAll(){
   try{
-    const [sum,acts,work,ob,pros,an]=await Promise.all([
+    const [sum,acts,work,ob,pros,an,pay]=await Promise.all([
       api('/pipeline/summary'),api('/actions/today'),api('/verification/worklist'),
-      api('/outbox'),api('/prospects'),api('/analytics/summary')
+      api('/outbox'),api('/prospects'),api('/analytics/summary'),api('/payments/dashboard')
     ]);
     $('#statusDot').classList.add('ok');$('#statusText').textContent='connected';
     PROSPECTS=pros.prospects;
@@ -245,6 +250,7 @@ async function loadAll(){
     renderWorklist(work.worklist);
     renderOutbox(ob.outbox);
     renderAnalytics(an);
+    renderCollections(pay);
     renderStageFilter(sum);
     renderProspects();
   }catch(e){
@@ -318,6 +324,34 @@ function renderOutbox(ob){
   window._OB=ob;
 }
 
+function renderCollections(pay){
+  $('#colCount').textContent=fmt(pay.collected_fees)+' collected';
+  const parts=[];
+  if(pay.to_invoice.length){
+    parts.push('<div class="an-h">They got paid — send the invoice / thank-you</div>');
+    parts.push(pay.to_invoice.map(x=>`<div class="row"><div class="main">
+      <div class="nm">${esc(x.name)} <span class="amt">${fmt(x.fee)}</span>
+        <span class="pill ${x.mode==='GRATUITY'?'ok':'info'}">${x.mode==='GRATUITY'?'thank-you':'invoice'}</span></div>
+      <div class="btns"><button class="primary" onclick="invoiceFee('${x.property_id}')">Generate & open</button>
+        <button onclick="feePaid('${x.property_id}')">Mark fee paid</button></div>
+    </div></div>`).join(''));
+  }
+  if(pay.reminders_due.length){
+    parts.push('<div class="an-h" style="margin-top:12px">Gentle reminders due</div>');
+    parts.push(pay.reminders_due.map(x=>`<div class="row"><div class="main">
+      <div class="nm">${esc(x.name)} — reminder #${x.reminder_number} <span class="amt">${fmt(x.fee)}</span></div>
+      <div class="meta">${esc(x.message)}</div>
+      <div class="btns"><button onclick="remindSent('${x.property_id}')">Logged as sent</button>
+        <button onclick="feePaid('${x.property_id}')">Mark fee paid</button></div>
+    </div></div>`).join(''));
+  }
+  if(pay.awaiting_fee.length){
+    parts.push(`<div class="meta" style="margin-top:10px">${pay.awaiting_fee.length} invoiced, awaiting the fee.</div>`);
+  }
+  $('#collections').innerHTML=parts.join('')||
+    '<div class="empty">No open collections. When a claimant gets paid, mark it on their row and invoice here.</div>';
+}
+
 function renderAnalytics(an){
   $('#narrative').innerHTML=an.narrative.map(s=>`<div class="ins">${esc(s)}</div>`).join('');
   const vl=an.value_ladder, max=Math.max(1,vl.published_value);
@@ -374,6 +408,7 @@ function renderProspects(){
         <button onclick="toggleMode('${p.property_id}','${p.fee_model||p.mode||'CONTRACT'}')" ${supp?'disabled':''}
           title="Toggle contract / gratuity">${(p.fee_model||p.mode)==='GRATUITY'?'🤝 Gratuity':'📄 Contract'}</button>
         <button onclick="letter('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
+        ${['SIGNED','FILED','PAID','CLOSED'].includes(p.stage)&&!p.funds_received_date?`<button onclick="fundsReceived('${p.property_id}')" title="Claimant received their money">💵 Got paid</button>`:''}
         <button onclick="preview('${p.property_id}')" ${supp?'disabled':''}>Outreach</button>
         <button onclick="draft('${p.property_id}')" ${supp||!(p.email)?'disabled':''}>Queue email</button>
         <button class="danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Suppress</button>
@@ -394,6 +429,14 @@ async function toggleMode(pid,cur){const next=cur==='GRATUITY'?'CONTRACT':'GRATU
     toast('Mode → '+next);loadAll();}catch(e){toast(e.message);}}
 async function letter(pid){try{const r=await api('/letter/generate',{method:'POST',body:{property_id:pid}});
   toast(r.mode+' letter ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
+async function fundsReceived(pid){try{await api('/payments/funds-received',{method:'POST',body:{property_id:pid}});
+  toast('Marked: claimant received their money');loadAll();}catch(e){toast(e.message);}}
+async function invoiceFee(pid){try{const r=await api('/payments/invoice',{method:'POST',body:{property_id:pid}});
+  toast(r.kind+' ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
+async function feePaid(pid){if(!confirm('Record the fee as PAID? This closes the record as collected.'))return;
+  try{await api('/payments/fee-paid',{method:'POST',body:{property_id:pid}});toast('Fee collected 🎉');loadAll();}catch(e){toast(e.message);}}
+async function remindSent(pid){try{await api('/payments/reminder-sent',{method:'POST',body:{property_id:pid}});
+  toast('Reminder logged');loadAll();}catch(e){toast(e.message);}}
 function findChip(p){const f=Math.round(p.findability||0);
   const cls=f>=70?'ok':f>=45?'warn':'danger';
   return `<span class="pill ${cls}" title="Findability score">no contact · findable ${f}</span>`;}
