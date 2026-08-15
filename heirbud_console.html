@@ -356,20 +356,21 @@ function renderProspects(){
   const stage=$('#stageFilter').value, q=$('#search').value.toLowerCase();
   let rows=PROSPECTS.filter(p=>(!stage||p.stage===stage)&&
     (!q||(p.name||'').toLowerCase().includes(q)||(p.holder||'').toLowerCase().includes(q)));
-  rows.sort((a,b)=>(b.expected_fee-a.expected_fee)||(b.score-a.score));  // strategic order
-  $('#rowsInfo').textContent=rows.length+' shown · ranked by expected fee';
+  rows.sort((a,b)=>(b.score-a.score)||(b.expected_fee-a.expected_fee));  // achievable-first
+  $('#rowsInfo').textContent=rows.length+' shown · ranked by priority (achievable first)';
   $('#prospects').innerHTML=rows.length?rows.map(p=>{
     const supp=p.suppression_status==='SUPPRESSED';
     return `<tr>
       <td><b>${esc(p.name)}</b><div class="meta" style="font-size:11px;color:var(--dim)">${esc(p.holder||'')} · ${esc(p.segment||'')}</div></td>
       <td class="amt">${fmt(p.amount)}</td>
-      <td><div style="display:flex;flex-direction:column;gap:3px">
-        <span class="amt" title="expected collectible fee">${fmt(p.expected_fee)} <span style="font-weight:400;color:var(--dim);font-size:11px">(${(p.score??0).toFixed(0)})</span></span>
+      <td><div style="display:flex;flex-direction:column;gap:3px" title="${esc(p.reason||'')}">
+        <span class="amt">${(p.score??0).toFixed(0)} <span style="font-weight:400;color:var(--dim);font-size:11px">· est ${fmt(p.expected_fee)}</span></span>
         ${trackPill(p.track)}</div></td>
       <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span></td>
       <td>${eligPill(p)}</td>
-      <td>${esc(p.phone||p.email||'—')}</td>
+      <td>${p.phone||p.email?esc(p.phone||p.email):findChip(p)}</td>
       <td><div class="btns">
+        <button onclick="findContact('${p.property_id}')" ${supp?'disabled':''} title="Skip-trace: find this person">🔎 Find</button>
         <button onclick="toggleMode('${p.property_id}','${p.fee_model||p.mode||'CONTRACT'}')" ${supp?'disabled':''}
           title="Toggle contract / gratuity">${(p.fee_model||p.mode)==='GRATUITY'?'🤝 Gratuity':'📄 Contract'}</button>
         <button onclick="letter('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
@@ -393,6 +394,27 @@ async function toggleMode(pid,cur){const next=cur==='GRATUITY'?'CONTRACT':'GRATU
     toast('Mode → '+next);loadAll();}catch(e){toast(e.message);}}
 async function letter(pid){try{const r=await api('/letter/generate',{method:'POST',body:{property_id:pid}});
   toast(r.mode+' letter ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
+function findChip(p){const f=Math.round(p.findability||0);
+  const cls=f>=70?'ok':f>=45?'warn':'danger';
+  return `<span class="pill ${cls}" title="Findability score">no contact · findable ${f}</span>`;}
+async function findContact(pid){
+  try{const d=await api('/prospects/'+pid+'/find');
+    const strat=d.strategies.map(s=>`<div class="row"><div class="main">
+      <div class="nm"><a href="${s.url}" target="_blank" rel="noopener">${esc(s.label)}</a>
+        <span class="pill ${s.precision==='high'?'ok':s.precision==='medium'?'info':''}">${s.precision}</span></div>
+      <div class="meta">${esc(s.why)}</div></div></div>`).join('');
+    const tips=(d.tips||[]).map(t=>`<div class="meta" style="margin:4px 0">• ${esc(t)}</div>`).join('');
+    const flabel=d.findability>=70?'ok':d.findability>=45?'warn':'danger';
+    modal(`Find ${esc(d.display_name)}`,
+      `<div style="margin-bottom:10px">
+         <span class="pill ${flabel}">findability ${Math.round(d.findability)} · ${esc(d.findability_label)}</span>
+         ${d.deceased_likely?'<span class="pill danger">deceased → find heirs</span>':''}
+         ${d.is_entity?'<span class="pill info">entity → find officer</span>':''}
+       </div>
+       <div class="meta" style="margin-bottom:12px">Name variants to try: <b>${(d.parsed.variants||[]).map(esc).join(' · ')}</b></div>
+       ${tips}${strat}`,
+      [['Close','',()=>$('#modal').close()]]);
+  }catch(e){toast(e.message);}}
 async function suppress(pid){if(!confirm('Suppress this record? This is terminal — no further outreach.'))return;
   try{await api('/crm/suppress',{method:'POST',body:{property_id:pid,reason:'console'}});toast('Suppressed');loadAll();}catch(e){toast(e.message);}}
 

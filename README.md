@@ -49,7 +49,9 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `followup_engine.py` | Daily prioritized action queue — run every morning |
 | `verification_queue.py` | Custody-date verification worklist — record eligibility with evidence |
 | `analytics.py` | Funnel + value ladder + cycle times + plain-English narrative |
-| `scoring.py` | Principled lead prioritization — value×eligibility×contact×fit, segment + track |
+| `scoring.py` | Achievable-first prioritization — sweet-spot value, barrier model, findability, segment + track + mode |
+| `contact_finder.py` | Intelligent skip-tracing — name variants, findability score, ranked lookups, deceased→heir pivot |
+| `autopilot.py` | One command advances the whole operation and writes the operator brief |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |
 | `outbox.py` | Approve-to-send queue — nothing sends without human approval (dry-run sender) |
 | `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
@@ -68,10 +70,11 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 
 ```bash
 pip install -r requirements.txt
-python demo_pilot.py
+python demo_pilot.py          # watch the whole loop on synthetic data
+python autopilot.py --file yourfile.csv   # advance everything, get today's operator brief
 ```
 
-Runs the entire loop against `fixtures/synthetic_wi_records.csv` (24 fake
+`demo_pilot.py` runs the entire loop against `fixtures/synthetic_wi_records.csv` (24 fake
 records) and proves every compliance gate fires: fee clamps to 10%, agreements
 are refused for ineligible/unverified records, and suppressed records vanish
 from outreach and the action queue. Uses a throwaway DB — no real data touched.
@@ -127,7 +130,9 @@ records can never be resurrected by auto-advance.
 - `POST /replies/process` — classify an inbound reply + take the safe auto-action
 - `POST /outbox/draft` → `POST /outbox/approve` → `POST /outbox/send` — approve-to-send flow
 - `GET /analytics/summary` — funnel, value ladder, cycle times, narrative
-- `GET /leads/prioritized` — prospects ranked by expected collectible fee
+- `GET /leads/prioritized` — prospects ranked by holistic priority (achievable first)
+- `GET /prospects/{id}/find` — intelligent skip-trace plan for one prospect
+- `GET /autopilot/brief` — run the autonomous pass, return the operator brief
 - `GET /owner/{token}` · `POST /owner/{token}/request-help` · `/not-me` — owner portal
 - `GET /pipeline/summary` — stage counts and total pipeline value
 

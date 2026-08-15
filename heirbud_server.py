@@ -211,18 +211,36 @@ def health():
 def list_prospects(stage: str | None = None, min_amount: float | None = None):
     from scoring import score_prospect
     ps = crm.get_all_prospects(stage=stage, min_amount=min_amount)
-    for p in ps:                      # attach priority score + track for the console
+    for p in ps:                      # attach priority signals for the console
         lead = score_prospect(p)
         p["score"], p["segment"], p["track"] = lead.score, lead.segment, lead.track
-        p["expected_fee"] = lead.expected_fee
+        p["expected_fee"], p["findability"] = lead.expected_fee, lead.findability
+        p["barrier"], p["reason"] = lead.barrier, lead.reason
     return {"prospects": ps}
 
 
 @app.get("/leads/prioritized")
 def leads_prioritized(limit: int = 25):
-    """Prospects ranked by expected, collectible fee — the strategic worklist."""
+    """Prospects ranked by holistic priority score — achievable wins first."""
     from scoring import prioritize
     return {"leads": prioritize(crm.get_all_prospects(), limit=limit)}
+
+
+@app.get("/prospects/{property_id}/find")
+def find_contact(property_id: str):
+    """Intelligent skip-trace plan: name variants, findability, ranked lookups."""
+    from contact_finder import build_plan
+    p = crm.get_prospect(property_id)
+    if not p:
+        raise HTTPException(404, "Prospect not found")
+    return build_plan(p).as_dict()
+
+
+@app.get("/autopilot/brief")
+def autopilot_brief():
+    """Run the autonomous pass and return the operator brief (JSON)."""
+    from autopilot import run
+    return run(crm)
 
 
 @app.get("/prospects/{property_id}")

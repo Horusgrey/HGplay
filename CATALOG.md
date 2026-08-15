@@ -20,7 +20,9 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `followup_engine.py` | Daily prioritized action queue (autonomy layer) |
 | `verification_queue.py` | Custody-date verification worklist — prioritized, evidence-tracked |
 | `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
-| `scoring.py` | Lead prioritization — value×eligibility×contact×fit, segment + recommended track |
+| `scoring.py` | Achievable-first prioritization — sweet-spot value, barriers, findability, segment/track/mode |
+| `contact_finder.py` | Skip-trace engine — name variants, findability, ranked public lookups, deceased→heir pivot |
+| `autopilot.py` | One-command autonomous pass → OPERATOR_BRIEF.md (find / verify / mail / replies) |
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |

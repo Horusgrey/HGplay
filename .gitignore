@@ -17,3 +17,4 @@ WI_HeirFinder*.csv
 # Env / secrets
 .env
 *.local
+OPERATOR_BRIEF.md

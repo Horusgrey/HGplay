@@ -63,9 +63,32 @@ def test_prioritize_ranks_by_expected_fee():
     assert ranked[0]["property_id"] == "big"       # bigger collectible fee leads
 
 
-def test_value_score_is_log_scaled_not_linear():
-    # A 100x bigger amount must NOT produce a 100x bigger value component.
-    small = scoring._value_score(3000)
-    big = scoring._value_score(300000)
-    assert big > small
-    assert big < small * 100
+def test_value_priority_favors_sweet_spot_over_megaclaims():
+    # A right-sized claim should out-prioritize a whale on the value component,
+    # because huge balances come with barriers and shouldn't keep buying priority.
+    sweet = scoring._value_priority(30000)
+    mega = scoring._value_priority(2_000_000)
+    assert sweet > mega
+
+
+def test_barrier_score_estate_high_owner_zero():
+    assert scoring.barrier_score({"amount": 5000}, "OWNER") == 0.0
+    assert scoring.barrier_score({"amount": 300000}, "ESTATE") > 0.6
+
+
+def test_reachability_uses_findability_when_no_contact():
+    # No phone/email → score derives from how findable the person is.
+    easy = scoring._reachability({"name": "Zephyrina Qubill", "last_known_address": "1 A St, Madison, WI 53703"})[0]
+    hard = scoring._reachability({"name": "John Smith", "last_known_address": "Milwaukee, WI"})[0]
+    assert easy > hard
+
+
+def test_clean_midsize_outranks_barriered_whale():
+    clean = {"property_id": "c", "name": "Jane Clean", "amount": 22000, "holder": "US BANK",
+             "property_type": "Checking", "eligibility_reviewed": True,
+             "last_known_address": "5 Elm St, Waunakee, WI 53597"}
+    whale = {"property_id": "w", "name": "ESTATE OF J SMITH", "amount": 300000,
+             "holder": "METLIFE", "property_type": "Insurance Proceeds",
+             "eligibility_reviewed": True, "last_known_address": "1 Main St, Madison, WI 53703"}
+    ranked = scoring.prioritize([whale, clean])
+    assert ranked[0]["property_id"] == "c"     # achievable win leads
