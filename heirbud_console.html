@@ -131,10 +131,12 @@
     <span class="dot" id="statusDot"></span><span id="statusText">connecting…</span>
     <span>·</span>
     <label>API key <input id="apiKey" type="password" placeholder="if required"></label>
+    <button id="importBtn" class="primary">⬆ Import data</button>
     <button id="refreshBtn">↻ Refresh</button>
   </div>
+  <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
 </header>
-<div class="banner">Prototype — synthetic data only. No live outreach until legal sign-off, verified custody source, auth &amp; a supervised pilot. Fees are capped at the Wisconsin 10% ceiling in code.</div>
+<div class="banner">Fees capped at Wisconsin's 10% in code · Click <b>⬆ Import data</b> to load your real CSV and begin · Telling someone they have money is always fine; get templates lawyer-reviewed before charging fees on estates.</div>
 
 <main>
   <section class="kpis" id="kpis"></section>
@@ -499,6 +501,21 @@ function modal(head,body,foot){$('#mHead').textContent=head;$('#mBody').innerHTM
 function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
 
 $('#refreshBtn').onclick=loadAll;
+$('#importBtn').onclick=()=>$('#csvFile').click();
+$('#csvFile').onchange=async(e)=>{
+  const f=e.target.files[0]; if(!f)return;
+  const fd=new FormData(); fd.append('file',f);
+  const h={}; if(KEY())h['X-API-Key']=KEY();
+  toast('Importing '+f.name+' …',8000);
+  try{
+    const r=await fetch('/seed/csv?min_amount=0&max_rows=5000',{method:'POST',headers:h,body:fd});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||('HTTP '+r.status));
+    toast(`Imported ${d.added} new · ${d.skipped} dupes · ${d.total_candidates} rows in file`,6000);
+    loadAll();
+  }catch(err){toast('Import failed: '+err.message,7000);}
+  e.target.value='';
+};
 loadAll();
 setInterval(loadAll,20000);
 </script>
