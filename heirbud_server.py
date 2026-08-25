@@ -236,6 +236,18 @@ def find_contact(property_id: str):
     return build_plan(p).as_dict()
 
 
+@app.post("/prospects/{property_id}/enrich")
+def enrich_contact(property_id: str, _=Depends(require_key)):
+    """Auto-fill phone/email from the configured data provider (mock until a key is set)."""
+    import skiptrace
+    res = skiptrace.enrich(crm, property_id)
+    if res.get("error") == "not found":
+        raise HTTPException(404, "Prospect not found")
+    if res.get("error") == "suppressed":
+        raise HTTPException(409, "Record is suppressed")
+    return res
+
+
 @app.get("/autopilot/brief")
 def autopilot_brief():
     """Run the autonomous pass and return the operator brief (JSON)."""

@@ -442,6 +442,13 @@ async function remindSent(pid){try{await api('/payments/reminder-sent',{method:'
 function findChip(p){const f=Math.round(p.findability||0);
   const cls=f>=70?'ok':f>=45?'warn':'danger';
   return `<span class="pill ${cls}" title="Findability score">no contact · findable ${f}</span>`;}
+async function autoFill(pid){
+  try{const r=await api('/prospects/'+pid+'/enrich',{method:'POST'});
+    const got=(r.filled||[]);
+    if(!got.length){toast('No new contact found');return;}
+    toast((r.demo?'DEMO ':'')+'Filled '+got.join(' + ')+': '+(r.phone||r.email));
+    $('#modal').close();loadAll();
+  }catch(e){toast(e.message);}}
 async function findContact(pid){
   try{const d=await api('/prospects/'+pid+'/find');
     const strat=d.strategies.map(s=>`<div class="row"><div class="main">
@@ -455,6 +462,10 @@ async function findContact(pid){
          <span class="pill ${flabel}">findability ${Math.round(d.findability)} · ${esc(d.findability_label)}</span>
          ${d.deceased_likely?'<span class="pill danger">deceased → find heirs</span>':''}
          ${d.is_entity?'<span class="pill info">entity → find officer</span>':''}
+       </div>
+       <div class="btns" style="margin-bottom:12px">
+         <button class="primary" onclick="autoFill('${pid}')">⚡ Auto-fill phone/email</button>
+         <span class="meta" style="align-self:center">uses your data provider — demo data until a key is set</span>
        </div>
        <div class="meta" style="margin-bottom:12px">Name variants to try: <b>${(d.parsed.variants||[]).map(esc).join(' · ')}</b></div>
        ${tips}${strat}`,
