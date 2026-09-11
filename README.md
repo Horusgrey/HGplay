@@ -17,6 +17,7 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 
 | File | What it is |
 |------|-----------|
+| `heirbud_command_center.html` | **⭐ The one you actually run.** The whole engine as a single browser file — no Python, no server, no install. Open it, import your CSV, and everything (ranking, households, custody gate, letters, invoices, collections) runs on your own machine. Data stays in the browser and never leaves the device. |
 | `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prioritized prospect table, funnel analytics. Theme-aware. |
 | `owner_portal.html` | **Owner-facing trust page** — served at `/verify?id=…`. Owners verify their own record, see the free state path front-and-center, opt in or opt out. |
 | `heirfinder_v1.html` | Standalone single-file tool — AI enrichment, outreach emails, localStorage. No server. |
@@ -51,6 +52,7 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `analytics.py` | Funnel + value ladder + cycle times + plain-English narrative |
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barrier model, findability, segment + track + mode |
 | `contact_finder.py` | Intelligent skip-tracing — name variants, findability score, ranked lookups, deceased→heir pivot |
+| `household.py` | **Household graph** — folds duplicate people into one conversation, finds an estate's heirs inside your own list, boosts ranking by leverage |
 | `autopilot.py` | One command advances the whole operation and writes the operator brief |
 | `payment_module.py` | Closes the money loop — mode-aware invoice/thank-you, friendly finite reminders, reconciliation |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |

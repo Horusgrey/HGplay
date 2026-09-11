@@ -99,6 +99,51 @@ to a track (Fast Track / Premium / Verify First / Self-Serve Nudge). A $300k
 estate that needs probate is not automatically better than three clean $15k
 owner claims you can bank this month.
 
+**Then prioritize by money per *conversation*, not money per row.** `household.py`.
+See §5b — this is the part competitors don't do.
+
+---
+
+## 5b. The household graph — our actual moat
+
+Every locator in Wisconsin works from the same public list. The list is not an
+edge; anyone can download it. The edge is **how much money one conversation is
+worth**, and the state file quietly hands that to anyone who bothers to group it:
+
+1. **The same person is listed several times.** Different holders, different
+   report years, sometimes a nickname or a bare initial. Five rows are one human
+   with five claims. Ungrouped, that's five letters to a stranger who is getting
+   increasingly annoyed. Grouped, it's one letter listing everything they're
+   owed — which converts better *and* costs a fifth as much to send.
+2. **Families share an address, and one of them is often deceased.** A
+   "Proceeds Due to Beneficiaries" record under an estate, with two living
+   same-surname people at the same street address, means **the heir you're
+   supposed to find is already sitting in your own data** — sometimes with a
+   phone number you tracked down last week for a different claim.
+
+Both are pure computation over records already in hand. No new data source, no
+subscription, no scraping. And both cut the same way for the person on the other
+end: fewer interruptions, one honest conversation that covers everything, and
+estates that most locators skip because they "look hard" actually getting worked.
+
+What it changes in the product:
+- **Leads** show a `×3 · $94,300` badge and rank higher (`scoring.prioritize`
+  applies a capped leverage multiplier — one call closing three claims is worth
+  more of a solo operator's day than one call closing one).
+- **Households tab** lists multi-claim people, heir bridges, and family clusters
+  ranked by money per conversation.
+- **Combined letter** replaces N letters with one.
+- **Heir approach script** turns a bridge into an actual phone call, with the
+  free-claim disclosure and the "never ask for an SSN" rules on the page.
+- **Operator brief** leads with these, because they're the cheapest dollars on
+  the list.
+
+**The privacy line, enforced in code:** a combined document is only ever
+assembled from *one person's own* claims. Relatives surface to the **operator**
+as a research lead — we never disclose one person's money to another person.
+Business claimants (banks, counties, hospitals, the State itself) are excluded
+from household grouping entirely; they're real records but a different job.
+
 ---
 
 ## 6. Segmentation — the premium tier is the real prize

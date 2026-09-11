@@ -22,19 +22,21 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barriers, findability, segment/track/mode |
 | `contact_finder.py` | Skip-trace engine — name variants, findability, ranked public lookups, deceased→heir pivot |
+| `household.py` | **Household graph** — same-person consolidation, heir bridges, money-per-conversation leverage |
 | `autopilot.py` | One-command autonomous pass → OPERATOR_BRIEF.md (find / verify / mail / replies / collect) |
 | `payment_module.py` | The money loop — mode-aware invoice/thank-you, friendly finite reminders, realized-fee reconciliation |
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
 | `demo_pilot.py` | **One-command end-to-end pilot** on synthetic data — proves every gate |
-| `fixtures/synthetic_wi_records.csv` | 24 fake WI records (16 eligible / 5 ineligible / 3 unverified) |
-| `tests/` | 48 pytest cases locking every compliance gate |
+| `fixtures/synthetic_wi_records.csv` | 31 fake WI records (incl. a multi-claim person, a family with an estate, and an institutional claimant) |
+| `tests/` | 133 pytest cases locking every compliance gate and the household graph |
 | `requirements.txt` | Python deps |
 
 ### Frontends
 | File | Purpose |
 |------|---------|
+| `heirbud_command_center.html` | **⭐ Standalone browser app** — the full engine client-side: import, rank, households, verify, letters, invoices, collections. localStorage only; nothing leaves the device |
 | `heirbud_console.html` | **Operator console** — served at `/`, pipeline/worklist/outbox/actions/analytics/priority |
 | `owner_portal.html` | **Owner trust page** — served at `/verify`, proof-first self-service |
 | `heirfinder_v1.html` | Standalone tool (localStorage, AI enrichment) |

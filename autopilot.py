@@ -19,6 +19,7 @@ from pathlib import Path
 from heirbud_crm import HeirBudCRM
 import scoring
 import contact_finder
+import household
 from verification_queue import build_worklist
 from analytics import summary as analytics_summary
 
@@ -67,15 +68,32 @@ def run(crm: HeirBudCRM) -> dict:
     from payment_module import dashboard as pay_dashboard
     pay = pay_dashboard(crm)
 
+    # 6) LEVERAGE — the cheapest dollars on the list: people who appear more than
+    # once (one letter, several claims) and estates whose heirs we already hold.
+    graph = household.build_graph(active)
+    clusters = household.same_person_clusters(graph)
+    bridges = household.heir_bridges(graph)
+
     return {
         "generated": datetime.now().isoformat(),
         "counts": {"active": len(active), "to_find": len(to_find),
                    "to_verify": len(to_verify), "ready_to_mail": len(ready_to_mail),
                    "replies_waiting": len(waiting),
                    "to_invoice": len(pay["to_invoice"]), "reminders_due": len(pay["reminders_due"]),
-                   "collected_fees": pay["collected_fees"]},
+                   "collected_fees": pay["collected_fees"],
+                   "multi_claim_people": len(clusters), "heir_bridges": len(bridges)},
         "find": to_find, "verify": to_verify, "mail": ready_to_mail, "replies": waiting,
         "collect": pay,
+        "clusters": [{"name": c.name, "claims": len(c.members), "total": c.total,
+                      "fee_potential": c.fee_potential, "address": c.address,
+                      "property_ids": [m["property_id"] for m in c.members]}
+                     for c in clusters],
+        "heir_bridges": [{"estate": b.estate["name"], "property_id": b.estate["property_id"],
+                          "amount": b.estate.get("amount", 0), "unlock": b.unlock,
+                          "candidates": [{"name": c["name"], "property_id": c["property_id"],
+                                          "contact": c.get("phone") or c.get("email") or ""}
+                                         for c in b.candidates]}
+                         for b in bridges],
         "narrative": analytics_summary(crm)["narrative"],
         "top_leads": ranked[:10],
     }
@@ -113,6 +131,28 @@ def render_brief(r: dict) -> str:
                      f"{x['days_since_funds']}d since funds")
         L.append("")
 
+    # Leverage first among the "work" sections: these are the same dollars at a
+    # fraction of the effort, which is the only durable edge on a public list.
+    if r.get("clusters"):
+        saved = sum(c["claims"] - 1 for c in r["clusters"])
+        L.append("## 🧩 One letter, several claims — do these first")
+        L.append(f"_{saved} letter{'' if saved == 1 else 's'} you don't have to write, and "
+                 f"{saved} fewer interruption{'' if saved == 1 else 's'} for the people on "
+                 f"the other end._")
+        for c in r["clusters"][:12]:
+            L.append(f"- **{c['name']}** — {c['claims']} claims, ${c['total']:,.0f} total "
+                     f"(fee ≤ ${c['fee_potential']:,.0f}) · {c['address']}")
+        L.append("")
+
+    if r.get("heir_bridges"):
+        L.append("## 🕯 Heir bridges — the estate's family is already in your list")
+        for b in r["heir_bridges"][:12]:
+            who = ", ".join(f"{c['name']}{' (' + c['contact'] + ')' if c['contact'] else ''}"
+                            for c in b["candidates"][:3])
+            L.append(f"- **{b['estate']}** (${b['amount']:,.0f}, unlocks ≤ ${b['unlock']:,.0f}) "
+                     f"→ living relatives at the same address: {who}")
+        L.append("")
+
     if r["mail"]:
         L.append("## 📮 Ready to mail — approve & send")
         for x in r["mail"]:
@@ -137,7 +177,8 @@ def render_brief(r: dict) -> str:
             L.append(f"- …and {len(r['verify']) - 12} more")
         L.append("")
 
-    if not any([r["replies"], r["mail"], r["find"], r["verify"]]):
+    if not any([r["replies"], r["mail"], r["find"], r["verify"],
+                r.get("clusters"), r.get("heir_bridges")]):
         L.append("✅ Nothing needs a decision right now. Import more leads to keep the engine fed.")
     return "\n".join(L)
 

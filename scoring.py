@@ -45,6 +45,20 @@ COMPLEX_SEGMENTS = {"ESTATE", "TRUST", "BUSINESS"}
 # so raw size STOPS buying priority and starts costing it.
 SWEET_FLOOR = 800.0
 SWEET_CEILING = 60000.0
+# Organization names appearing in the CLAIMANT column. Wisconsin's list is not
+# all people: banks, credit unions, hospitals, counties and the State itself are
+# listed as owners. They are legitimate records but a different job (no heir to
+# find, no household, usually a corporate treasury department to email), so they
+# must be recognized rather than treated as individuals.
+_ORG_NAME = re.compile(
+    r"\bLLC\b|\bL\.?L\.?C\b|\bINC\b|\bCORP\b|\bCOMPANY\b|\bCO\.?\b|DISSOLVED|\bLP\b|\bLLP\b|\bLTD\b"
+    r"|\bBANK\b|CREDIT UNION|\bN\.?A\.?$|\bFSB\b|SAVINGS BANK|\bINSURANCE\b|\bASSURANCE\b"
+    r"|HOSPITAL|CLINIC|MEDICAL CENTER|\bHEALTH\b|UNIVERSITY|COLLEGE|SCHOOL DIST|\bSCHOOL\b"
+    r"|\bCHURCH\b|\bPARISH\b|\bSYNAGOGUE\b|\bMOSQUE\b|\bDIOCESE\b"
+    r"|\bCOUNTY\b|STATE OF|CITY OF|VILLAGE OF|TOWN OF|\bTOWNSHIP\b|DEPARTMENT OF|\bDEPT\b"
+    r"|\bASSOCIATION\b|\bASSOC\b|\bFOUNDATION\b|\bSOCIETY\b|\bINSTITUTE\b|\bPARTNERS\b"
+    r"|\bHOLDINGS\b|\bENTERPRISES\b|\bINDUSTRIES\b|\bSERVICES\b|\bSOLUTIONS\b|\bGROUP\b"
+    r"|\bPROPERTIES\b|\bREALTY\b|\bMOTORS\b|\bPHARMACY\b|\bRESTAURANT\b|\bUNION\b|\bLOCAL \d+\b")
 # Property types that signal friction (heavier documentation / more parties).
 _HIGH_BARRIER_TYPES = re.compile(
     r"SECURIT|STOCK|DIVIDEND|MUTUAL|BROKERAGE|INSURANCE|ANNUIT|LIFE|SAFE\s*DEPOSIT|MINERAL|ROYALT")
@@ -62,7 +76,7 @@ def segment(prospect: dict) -> str:
         return "ESTATE"
     if re.search(r"\bTRUST\b|\bTRUSTEE\b|\bLIVING TRUST\b", name):
         return "TRUST"
-    if re.search(r"\bLLC\b|\bINC\b|\bCORP\b|\bCOMPANY\b|\bCO\.?\b|DISSOLVED|\bLP\b|\bLTD\b", name):
+    if _ORG_NAME.search(name):
         return "BUSINESS"
     return "OWNER"
 
@@ -251,8 +265,25 @@ def prioritize(prospects: list[dict], limit: int | None = None) -> list[dict]:
     right-sized claim outranks a huge-but-barriered one, exactly as it should for
     a solo operator working for cash flow. Expected fee breaks ties and is shown
     alongside so the size of each prize stays visible.
+
+    Leverage is applied here rather than in ``score_prospect`` because it is a
+    property of the LIST, not of one record: reaching someone who has four claims
+    is one conversation that closes four, so it earns a boost a single-claim
+    record of the same size doesn't. See household.py.
     """
-    leads = [score_prospect(p).as_dict() for p in prospects]
+    import household                      # here to keep the import graph one-way
+    graph = household.build_graph(prospects)
+    leads = []
+    for p in prospects:
+        lead = score_prospect(p).as_dict()
+        lev = household.leverage(p, graph)
+        lead["claims"] = lev.claims
+        lead["own_total"] = lev.own_total
+        if lev.claims > 1 and lead["score"] > 0:
+            lead["score"] = round(lead["score"] * lev.multiplier, 1)
+            lead["reason"] = (f"{lead['reason']} · {lev.claims} claims for this person "
+                              f"(${lev.own_total:,.0f}) — one letter covers all")
+        leads.append(lead)
     leads.sort(key=lambda l: (l["score"], l["expected_fee"]), reverse=True)
     return leads[:limit] if limit else leads
 
