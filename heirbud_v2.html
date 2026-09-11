@@ -1,0 +1,1100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeirBud v2 — ZGroup Autonomous Pipeline</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Space+Mono:ital,wght@0,400;0,700;1,400&display=swap');
+
+  :root {
+    --bg: #f5f2eb;
+    --surface: #faf8f3;
+    --panel: #ffffff;
+    --border: #ddd8cc;
+    --border-strong: #c8c0b0;
+    --text: #1a1814;
+    --text-dim: #7a7060;
+    --text-faint: #b0a898;
+    --ink: #1a1814;
+    --green: #1a5c2a; --green-bg: #edf5ef; --green-light: #4caf50;
+    --amber: #7a4a00; --amber-bg: #fdf3e0;
+    --red: #8b1a1a; --red-bg: #faeaea;
+    --blue: #1a3a6b; --blue-bg: #eaeffb;
+    --purple: #4a1a6b; --purple-bg: #f3eafb;
+    --sans: 'Space Mono', monospace;
+    --serif: 'Instrument Serif', serif;
+  }
+
+  * { margin:0;padding:0;box-sizing:border-box; }
+  body { background:var(--bg);color:var(--text);font-family:var(--sans);font-size:12px;line-height:1.5;height:100vh;display:flex;flex-direction:column;overflow:hidden; }
+
+  /* TOPBAR */
+  .topbar { display:flex;align-items:center;gap:16px;padding:0 24px;height:52px;background:var(--ink);color:var(--bg);flex-shrink:0; }
+  .logo { font-family:var(--serif);font-size:22px;color:var(--bg);letter-spacing:-0.5px; }
+  .logo-sub { font-size:9px;color:rgba(245,242,235,0.35);letter-spacing:.15em;text-transform:uppercase; }
+  .dot { width:6px;height:6px;border-radius:50%;background:#555; }
+  .dot.live { background:#4caf50;box-shadow:0 0 6px #4caf50; }
+  .dot.dead { background:#f44336; }
+  .server-txt { font-size:10px;color:rgba(245,242,235,.4); }
+  .topbar-right { margin-left:auto;display:flex;align-items:center;gap:16px; }
+  .pipeline-val { font-size:13px;color:rgba(245,242,235,.7); }
+  .pipeline-val strong { color:#fff;font-weight:700; }
+  .top-btn { background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:2px;color:rgba(245,242,235,.8);font-family:var(--sans);font-size:9px;padding:5px 12px;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;transition:all .15s; }
+  .top-btn:hover { background:rgba(255,255,255,.18);color:#fff; }
+  .top-btn.accent { background:rgba(76,175,80,.2);border-color:rgba(76,175,80,.5);color:#a5d6a7; }
+  .top-btn.accent:hover { background:rgba(76,175,80,.35); }
+
+  /* STATS */
+  .stats-bar { display:flex;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;overflow-x:auto; }
+  .stat-chip { padding:9px 18px;border-right:1px solid var(--border);white-space:nowrap;cursor:pointer;transition:background .12s;min-width:70px; }
+  .stat-chip:hover { background:var(--bg); }
+  .stat-chip.active { background:var(--ink);color:var(--surface); }
+  .stat-chip .n { font-size:16px;font-family:var(--serif);line-height:1.1; }
+  .stat-chip .lbl { font-size:9px;color:var(--text-faint);text-transform:uppercase;letter-spacing:.1em;margin-top:1px; }
+  .stat-chip.active .lbl { color:rgba(245,242,235,.4); }
+
+  /* MAIN */
+  .main { display:flex;flex:1;overflow:hidden; }
+
+  /* LEFT — prospect list */
+  .left-col { width:320px;border-right:1px solid var(--border);background:var(--surface);display:flex;flex-direction:column;overflow:hidden;flex-shrink:0; }
+  .list-top { padding:10px 14px;border-bottom:1px solid var(--border);display:flex;gap:8px; }
+  .list-top input { flex:1;background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:6px 9px;font-family:var(--sans);font-size:11px;color:var(--text);outline:none; }
+  .list-top input:focus { border-color:var(--border-strong); }
+  .stage-strip { display:flex;gap:4px;padding:6px 14px;border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0; }
+  .stage-pill { font-size:9px;padding:3px 8px;border-radius:10px;border:1px solid var(--border);cursor:pointer;white-space:nowrap;background:var(--panel);color:var(--text-dim);transition:all .12s; }
+  .stage-pill.active { background:var(--ink);color:var(--surface);border-color:var(--ink); }
+  .prospect-scroll { flex:1;overflow-y:auto; }
+  .prospect-scroll::-webkit-scrollbar { width:3px; }
+  .prospect-scroll::-webkit-scrollbar-thumb { background:var(--border); }
+
+  .prospect-item { padding:12px 14px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s; }
+  .prospect-item:hover { background:var(--bg); }
+  .prospect-item.active { background:var(--ink); }
+  .prospect-item.active .p-name,.prospect-item.active .p-amount { color:var(--surface); }
+  .prospect-item.active .p-sub { color:rgba(245,242,235,.35); }
+  .prospect-item.active .stage-tag { opacity:.6; }
+  .p-row { display:flex;justify-content:space-between;align-items:center;gap:8px; }
+  .p-name { font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis; }
+  .p-amount { font-family:var(--serif);font-size:14px;color:var(--green);white-space:nowrap;font-style:italic; }
+  .p-sub { font-size:9px;color:var(--text-faint);margin-top:2px; }
+  .stage-tag { display:inline-block;padding:2px 7px;border-radius:2px;font-size:8px;letter-spacing:.06em;text-transform:uppercase;margin-top:4px;font-weight:700; }
+
+  /* DETAIL */
+  .detail-panel { flex:1;overflow-y:auto;padding:20px 24px;display:flex;flex-direction:column;gap:16px; }
+  .detail-panel::-webkit-scrollbar { width:3px; }
+  .detail-panel::-webkit-scrollbar-thumb { background:var(--border); }
+
+  .no-sel { display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;color:var(--text-faint);text-align:center; }
+  .no-sel .big { font-family:var(--serif);font-size:48px;font-style:italic; }
+
+  /* CARD */
+  .card { background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden; }
+  .card-head { padding:10px 14px;border-bottom:1px solid var(--border);font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-dim);display:flex;align-items:center;justify-content:space-between;background:var(--surface); }
+  .card-body { padding:14px; }
+
+  /* DETAIL HEADER */
+  .d-name { font-family:var(--serif);font-size:26px;font-style:italic;line-height:1.1; }
+  .d-amount { font-family:var(--serif);font-size:32px;font-style:italic;color:var(--green); }
+  .d-fee { font-size:10px;color:var(--text-faint);margin-top:2px; }
+  .d-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px; }
+  .d-field .lbl { font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:2px; }
+  .d-field .val { font-size:11px; }
+
+  /* CONTACT ROW */
+  .contact-row { display:flex;gap:8px;flex-wrap:wrap;margin-top:12px; }
+  .contact-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:3px;font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;border:1px solid;text-decoration:none;transition:all .15s;font-weight:700; }
+  .contact-btn.call { background:var(--green-bg);border-color:var(--green);color:var(--green); }
+  .contact-btn.call:hover { background:#d0ecd6; }
+  .contact-btn.email { background:var(--blue-bg);border-color:var(--blue);color:var(--blue); }
+  .contact-btn.email:hover { background:#d0dff5; }
+  .contact-btn.sms { background:var(--amber-bg);border-color:var(--amber);color:var(--amber); }
+  .contact-btn.sms:hover { background:#f5e4c0; }
+  .contact-btn.find { background:var(--purple-bg);border-color:var(--purple);color:var(--purple); }
+  .contact-btn.find:hover { background:#e6d5f5; }
+  .contact-btn:disabled,.contact-btn.disabled { opacity:.35;pointer-events:none; }
+
+  /* STAGE STEPPER */
+  .stepper { display:flex;align-items:center;overflow-x:auto;padding:4px 0; }
+  .step { display:flex;flex-direction:column;align-items:center;gap:3px;min-width:60px;cursor:pointer;padding:6px 4px;border-radius:3px;transition:background .1s; }
+  .step:hover { background:var(--bg); }
+  .step .c { width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;color:var(--text-faint);background:var(--panel);position:relative;z-index:1;transition:all .15s; }
+  .step.done .c { background:var(--ink);border-color:var(--ink);color:var(--surface); }
+  .step.cur .c { background:var(--amber-bg);border-color:var(--amber);color:var(--amber);box-shadow:0 0 0 3px rgba(122,74,0,.12); }
+  .step .sn { font-size:7px;text-transform:uppercase;letter-spacing:.04em;color:var(--text-faint);text-align:center;line-height:1.2; }
+  .step.done .sn { color:var(--text-dim); }
+  .step.cur .sn { color:var(--amber); }
+  .sline { flex:1;height:2px;background:var(--border);min-width:16px;margin-top:-12px;transition:background .15s; }
+  .sline.done { background:var(--ink); }
+
+  /* SCRIPT AREA */
+  .script-tabs { display:flex;border-bottom:1px solid var(--border); }
+  .stab { padding:8px 14px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .12s; }
+  .stab:hover { color:var(--text); }
+  .stab.active { color:var(--ink);border-color:var(--ink); }
+  .script-box { background:var(--bg);padding:12px;font-size:11px;line-height:1.75;white-space:pre-wrap;max-height:200px;overflow-y:auto;border-radius:0 0 3px 3px;position:relative; }
+  .script-box::-webkit-scrollbar { width:3px; }
+  .copy-chip { position:absolute;top:8px;right:8px;background:var(--panel);border:1px solid var(--border);border-radius:2px;padding:3px 9px;font-family:var(--sans);font-size:9px;cursor:pointer;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;transition:all .12s; }
+  .copy-chip:hover { border-color:var(--border-strong);color:var(--text); }
+  .copy-chip.ok { background:var(--green-bg);border-color:var(--green);color:var(--green); }
+
+  /* GMAIL BTN */
+  .gmail-row { display:flex;gap:8px;margin-top:10px;flex-wrap:wrap; }
+  .gmail-btn { display:inline-flex;align-items:center;gap:6px;padding:8px 14px;background:#ea4335;border:none;border-radius:3px;color:#fff;font-family:var(--sans);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;text-decoration:none;transition:opacity .15s; }
+  .gmail-btn:hover { opacity:.85; }
+  .gmail-btn.disabled { opacity:.35;pointer-events:none; }
+
+  /* LOG TABLE */
+  .log-tbl { width:100%;border-collapse:collapse;font-size:11px; }
+  .log-tbl th { text-align:left;padding:5px 9px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);border-bottom:1px solid var(--border); }
+  .log-tbl td { padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top; }
+  .log-tbl tr:last-child td { border:none; }
+  .badge { display:inline-block;padding:1px 6px;border-radius:2px;font-size:9px;text-transform:uppercase;font-weight:700; }
+  .badge.pos { background:var(--green-bg);color:var(--green); }
+  .badge.neg { background:var(--red-bg);color:var(--red); }
+  .badge.neu { background:var(--amber-bg);color:var(--amber); }
+
+  .log-form { display:flex;gap:7px;margin-top:10px;flex-wrap:wrap; }
+  .log-form select,.log-form input { background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:6px 9px;font-family:var(--sans);font-size:11px;color:var(--text);outline:none; }
+  .log-form input { flex:1;min-width:120px; }
+
+  /* COACHING */
+  .coach-box { background:linear-gradient(135deg,var(--purple-bg),var(--blue-bg));border:1px solid #c5b0e0;border-radius:3px;padding:12px;font-size:11px;line-height:1.75;white-space:pre-wrap;min-height:50px;position:relative; }
+  .coach-box.loading { animation:pulse 1.4s ease-in-out infinite; }
+
+  /* NOTES */
+  .notes-ta { width:100%;background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:9px;font-family:var(--sans);font-size:11px;color:var(--text);resize:vertical;min-height:60px;outline:none;line-height:1.5; }
+  .notes-ta:focus { border-color:var(--border-strong); }
+
+  /* ACTIONS */
+  .act-row { display:flex;gap:8px;flex-wrap:wrap; }
+  .act-btn { background:var(--panel);border:1px solid var(--border-strong);border-radius:3px;padding:8px 14px;font-family:var(--sans);font-size:10px;text-transform:uppercase;letter-spacing:.07em;cursor:pointer;color:var(--text);transition:all .15s;display:flex;align-items:center;gap:5px; }
+  .act-btn:hover { background:var(--bg); }
+  .act-btn.primary { background:var(--ink);color:var(--surface);border-color:var(--ink); }
+  .act-btn.primary:hover { opacity:.85; }
+  .act-btn.green { background:var(--green-bg);border-color:var(--green);color:var(--green); }
+  .act-btn:disabled { opacity:.35;cursor:not-allowed; }
+
+  /* CSV IMPORT MODAL */
+  .modal-overlay { display:none;position:fixed;inset:0;background:rgba(26,24,20,.7);z-index:100;align-items:center;justify-content:center; }
+  .modal-overlay.open { display:flex; }
+  .modal { background:var(--panel);border:1px solid var(--border-strong);border-radius:6px;width:640px;max-width:95vw;max-height:85vh;display:flex;flex-direction:column;overflow:hidden; }
+  .modal-head { padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;background:var(--surface); }
+  .modal-title { font-family:var(--serif);font-size:18px;font-style:italic; }
+  .modal-close { background:none;border:none;cursor:pointer;font-size:18px;color:var(--text-dim);padding:4px; }
+  .modal-body { padding:20px;flex:1;overflow-y:auto; }
+  .modal-foot { padding:14px 20px;border-top:1px solid var(--border);display:flex;gap:10px;justify-content:flex-end;background:var(--surface); }
+
+  .drop-zone { border:2px dashed var(--border-strong);border-radius:4px;padding:40px 20px;text-align:center;cursor:pointer;transition:all .15s;margin-bottom:16px; }
+  .drop-zone:hover,.drop-zone.dragover { border-color:var(--green);background:var(--green-bg); }
+  .drop-zone .dz-icon { font-family:var(--serif);font-size:36px;font-style:italic;color:var(--text-faint);margin-bottom:8px; }
+  .drop-zone .dz-text { font-size:12px;color:var(--text-dim); }
+  .drop-zone .dz-sub { font-size:10px;color:var(--text-faint);margin-top:4px; }
+
+  .import-filters { display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap; }
+  .import-filters label { font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:6px; }
+  .import-filters input[type="number"] { background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:5px 8px;font-family:var(--sans);font-size:11px;width:90px;color:var(--text);outline:none; }
+  .import-filters select { background:var(--bg);border:1px solid var(--border);border-radius:2px;padding:5px 8px;font-family:var(--sans);font-size:11px;color:var(--text);outline:none; }
+
+  .preview-tbl { width:100%;border-collapse:collapse;font-size:11px; }
+  .preview-tbl th { text-align:left;padding:6px 9px;font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);border-bottom:1px solid var(--border);background:var(--surface); }
+  .preview-tbl td { padding:7px 9px;border-bottom:1px solid var(--border);vertical-align:top; }
+  .preview-tbl tr:hover td { background:var(--bg); }
+  .preview-tbl input[type="checkbox"] { cursor:pointer; }
+
+  .import-summary { padding:10px 14px;background:var(--green-bg);border:1px solid var(--green);border-radius:3px;font-size:11px;color:var(--green);margin-bottom:12px; }
+
+  /* BATCH PANEL */
+  .batch-bar { display:none;padding:10px 14px;background:var(--ink);color:var(--surface);align-items:center;gap:12px;flex-shrink:0; }
+  .batch-bar.show { display:flex; }
+  .batch-bar-txt { font-size:11px;color:rgba(245,242,235,.7); }
+  .batch-bar-txt strong { color:#fff; }
+
+  /* OFFLINE */
+  .offline-bar { display:none;padding:6px 20px;background:var(--amber-bg);border-bottom:1px solid #e0c060;font-size:10px;color:var(--amber);flex-shrink:0; }
+  .offline-bar.show { display:block; }
+
+  /* URL chips */
+  .url-chips { display:flex;gap:6px;flex-wrap:wrap;margin-top:8px; }
+  .url-chip { background:var(--blue-bg);border:1px solid #b0c8f0;border-radius:2px;padding:3px 9px;font-size:9px;color:var(--blue);cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:background .12s; }
+  .url-chip:hover { background:#d0e2fb; }
+
+  /* ANIMATIONS */
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.6} }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)} }
+  @keyframes spin { to{transform:rotate(360deg)} }
+  .fadeIn { animation:fadeIn .2s ease; }
+  .spinner { display:inline-block;width:10px;height:10px;border:2px solid var(--border);border-top-color:var(--text);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle; }
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div><div class="logo">HeirBud</div><div class="logo-sub">ZGroup v2 — Autonomous Pipeline</div></div>
+  <div style="display:flex;align-items:center;gap:7px">
+    <div class="dot" id="sDot"></div>
+    <div class="server-txt" id="sTxt">Demo mode</div>
+  </div>
+  <div class="topbar-right">
+    <div class="pipeline-val">Pipeline: <strong id="pipeVal">$0</strong></div>
+    <button class="top-btn" onclick="openImport()">⬆ Import CSV</button>
+    <button class="top-btn accent" onclick="openBatchModal()">⚡ Batch Outreach</button>
+  </div>
+</div>
+
+<!-- OFFLINE -->
+<div class="offline-bar" id="offlineBar">
+  ⚠ Server offline — Demo mode active. Run: <strong>uvicorn heirbud_server:app --reload --port 8001</strong>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="stat-chip active" onclick="filterStage('ALL')"><div class="n" id="sAll">0</div><div class="lbl">Total</div></div>
+  <div class="stat-chip" onclick="filterStage('IDENTIFIED')"><div class="n" id="sIdentified">0</div><div class="lbl">Identified</div></div>
+  <div class="stat-chip" onclick="filterStage('ENRICHED')"><div class="n" id="sEnriched">0</div><div class="lbl">Enriched</div></div>
+  <div class="stat-chip" onclick="filterStage('CONTACTED')"><div class="n" id="sContacted">0</div><div class="lbl">Contacted</div></div>
+  <div class="stat-chip" onclick="filterStage('RESPONDED')"><div class="n" id="sResponded">0</div><div class="lbl">Responded</div></div>
+  <div class="stat-chip" onclick="filterStage('AGREEMENT_SENT')"><div class="n" id="sAgreement_sent">0</div><div class="lbl">Sent</div></div>
+  <div class="stat-chip" onclick="filterStage('SIGNED')"><div class="n" id="sSigned">0</div><div class="lbl">Signed</div></div>
+  <div class="stat-chip" onclick="filterStage('PAID')"><div class="n" id="sPaid">0</div><div class="lbl">Paid 💰</div></div>
+</div>
+
+<!-- BATCH BAR -->
+<div class="batch-bar" id="batchBar">
+  <div class="batch-bar-txt"><strong id="batchCount">0</strong> prospects selected</div>
+  <button class="act-btn primary" onclick="batchEmailAll()" style="padding:6px 12px;font-size:9px">✉ Open All in Gmail</button>
+  <button class="act-btn" onclick="generateBatchScripts()" style="padding:6px 12px;font-size:9px;color:var(--surface);border-color:rgba(255,255,255,.2)">Copy All Scripts</button>
+  <button class="act-btn" onclick="clearSelection()" style="padding:6px 12px;font-size:9px;color:rgba(245,242,235,.5);border-color:rgba(255,255,255,.1)">✕ Clear</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT -->
+  <div class="left-col">
+    <div class="list-top">
+      <input type="text" id="searchQ" placeholder="Search name, holder, amount..." oninput="applyFilters()">
+    </div>
+    <div class="stage-strip" id="stageStrip"></div>
+    <div class="prospect-scroll" id="prospectScroll"></div>
+  </div>
+
+  <!-- DETAIL -->
+  <div class="detail-panel" id="detailPanel">
+    <div class="no-sel">
+      <div class="big">⚖</div>
+      <div style="font-size:13px;color:var(--text-dim)">Select a prospect to open their file</div>
+      <div style="font-size:11px;margin-top:4px">Import your CSV or click any prospect to start.</div>
+    </div>
+  </div>
+
+</div>
+
+<!-- CSV IMPORT MODAL -->
+<div class="modal-overlay" id="importModal">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">Import Prospects from CSV</div>
+      <button class="modal-close" onclick="closeImport()">×</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="drop-zone" id="dropZone" onclick="document.getElementById('csvFile').click()"
+        ondragover="event.preventDefault();this.classList.add('dragover')"
+        ondragleave="this.classList.remove('dragover')"
+        ondrop="handleDrop(event)">
+        <div class="dz-icon">📄</div>
+        <div class="dz-text">Drop your WI Priority Targets CSV here</div>
+        <div class="dz-sub">or click to browse · Expects columns: LastName, FirstName, Amount, Property Type, Holder, Address, City, Zip</div>
+      </div>
+      <input type="file" id="csvFile" accept=".csv" style="display:none" onchange="handleFileSelect(this)">
+
+      <div class="import-filters">
+        <label>Min Amount $<input type="number" id="minAmt" value="50000" min="0" step="1000" onchange="applyImportFilter()"></label>
+        <label>Priority:
+          <select id="priFilter" onchange="applyImportFilter()">
+            <option value="">All</option>
+            <option value="HIGH" selected>HIGH only</option>
+            <option value="MEDIUM">MEDIUM+</option>
+          </select>
+        </label>
+        <label>Max rows: <input type="number" id="maxRows" value="200" min="10" max="2000" onchange="applyImportFilter()" style="width:70px"></label>
+      </div>
+
+      <div id="importSummary" style="display:none"></div>
+      <div id="previewWrap" style="overflow-x:auto;max-height:320px;overflow-y:auto"></div>
+
+    </div>
+    <div class="modal-foot">
+      <button class="act-btn" onclick="closeImport()">Cancel</button>
+      <button class="act-btn primary" id="importBtn" disabled onclick="doImport()">Import Selected Prospects</button>
+    </div>
+  </div>
+</div>
+
+<!-- BATCH MODAL -->
+<div class="modal-overlay" id="batchModal">
+  <div class="modal" style="width:500px">
+    <div class="modal-head">
+      <div class="modal-title">Batch Outreach</div>
+      <button class="modal-close" onclick="document.getElementById('batchModal').classList.remove('open')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:12px;color:var(--text-dim);margin-bottom:16px;line-height:1.6">
+        Select prospects from the list to batch-email them. Each Gmail compose window opens pre-filled with a personalized email for that specific prospect and asset type.
+      </p>
+      <div style="background:var(--amber-bg);border:1px solid #e0c060;border-radius:3px;padding:10px 14px;font-size:11px;color:var(--amber);margin-bottom:16px">
+        ⚠ Gmail will block bulk opens if you have a popup blocker. Allow popups from this page, then click "Open All in Gmail."
+      </div>
+      <div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Quick-select:</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="act-btn" onclick="selectByStage('ENRICHED');document.getElementById('batchModal').classList.remove('open')">All Enriched</button>
+        <button class="act-btn" onclick="selectTopN(10);document.getElementById('batchModal').classList.remove('open')">Top 10 by Amount</button>
+        <button class="act-btn" onclick="selectTopN(25);document.getElementById('batchModal').classList.remove('open')">Top 25 by Amount</button>
+        <button class="act-btn" onclick="selectByStage('IDENTIFIED');document.getElementById('batchModal').classList.remove('open')">All Identified</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const API = 'http://localhost:8001';
+const STAGES = ['IDENTIFIED','ENRICHED','CONTACTED','RESPONDED','AGREEMENT_SENT','SIGNED','FILED','PAID','CLOSED'];
+const SC = {
+  IDENTIFIED:{bg:'#e8f5e9',c:'#1b5e20'},ENRICHED:{bg:'#e3f2fd',c:'#0d47a1'},
+  CONTACTED:{bg:'#fff8e1',c:'#e65100'},RESPONDED:{bg:'#fce4ec',c:'#880e4f'},
+  AGREEMENT_SENT:{bg:'#f3e5f5',c:'#4a148c'},SIGNED:{bg:'#e0f7fa',c:'#006064'},
+  FILED:{bg:'#e8eaf6',c:'#1a237e'},PAID:{bg:'#e8f5e9',c:'#1b5e20'},CLOSED:{bg:'#efebe9',c:'#3e2723'}
+};
+
+let allP = [{property_id:'8476391',name:'John Hoover',last_known_address:'560 White Oak Cir, Hudson, WI 54016',amount:283265.10,property_type:'Misc. Outstanding Checks',holder:'COINBASE INC',priority:'HIGH',stage:'IDENTIFIED',phone:null,email:'j.hoover@email.com',notes:'Abandoned Coinbase account.',contact_log:[],search_urls:{whitepages:'https://www.whitepages.com/name/John-Hoover/WI',truepeoplesearch:'https://www.truepeoplesearch.com/results?name=John+Hoover&citystatezip=Hudson+WI',fastpeoplesearch:'https://www.fastpeoplesearch.com/name/John-Hoover_WI'}},{property_id:'7388709',name:'Lorraine Vasser',last_known_address:'5451 S Tuckaway Ct, Milwaukee, WI 53221',amount:744236.68,property_type:'Ind. Policy Benefit/Claim Pmt.',holder:'NATIONWIDE LIFE INSURANCE CO',priority:'HIGH',stage:'ENRICHED',phone:'(414) 555-0198',email:'l.vasser@gmail.com',notes:'Life insurance benefit.',contact_log:[{method:'Phone',outcome:'No Answer',date:'2026-05-01',notes:'Rang 4x'}],search_urls:{}},{property_id:'8021634',name:'Jacqueline Ohman',last_known_address:'115 N 68th St, Milwaukee, WI 53213',amount:340274.92,property_type:'Liqu Fnds/Rdmp Unsrr Stck, Bnd',holder:'WEC ENERGY GROUP INC',priority:'HIGH',stage:'CONTACTED',phone:'(608) 555-0244',email:'j.ohman@email.com',notes:'Sent intro email May 2.',contact_log:[{method:'Email',outcome:'Sent',date:'2026-05-02',notes:'Intro email sent'}],search_urls:{}},{property_id:'8428209',name:'Lucille Kelly',last_known_address:'2056 18th Ave, Baldwin, WI 54002',amount:316987.62,property_type:'Proceeds Due to Beneficiaries',holder:'BRIGHTHOUSE LIFE INSURANCE COMPANY',priority:'HIGH',stage:'RESPONDED',phone:'(262) 555-0419',email:'l.kelly@email.com',notes:'Very interested. Asked about process.',contact_log:[{method:'Phone',outcome:'Answered',date:'2026-05-01',notes:'30 min call. Warm.'}],search_urls:{}},{property_id:'8233008',name:'Walter Iverson',last_known_address:'W7260 County Rd B, Coleman, WI 54112',amount:296501.90,property_type:"Cashier's Check",holder:'THE STEPHENSON NATIONAL BANK',priority:'HIGH',stage:'AGREEMENT_SENT',phone:'(920) 555-0371',email:'wiverson@email.com',notes:'Agreement sent 5/1.',contact_log:[{method:'Email',outcome:'Agreement Sent',date:'2026-05-01',notes:'PDF contract emailed'}],search_urls:{}},{property_id:'7549280',name:'Yuming Gao',last_known_address:'100 E Main St, Waukesha, WI 53186',amount:693857.10,property_type:'Liqu Fnds/Rdmp Unsrr Stck, Bnd',holder:'TD AMERITRADE CLEARING INC',priority:'HIGH',stage:'SIGNED',phone:'(414) 555-0520',email:'y.gao@email.com',notes:'Contract signed 4/28.',contact_log:[{method:'Phone',outcome:'Signed',date:'2026-04-28',notes:'All docs returned'}],search_urls:{}}];
+
+let filtered = [...allP];
+let selected = null;
+let selectedIds = new Set();
+let stageFilter = 'ALL';
+let serverLive = false;
+let rawCsvRows = [];
+let filteredCsvRows = [];
+let currentScript = 'call';
+let importSelections = new Set();
+
+// ── INIT ──
+async function init() {
+  await checkServer();
+  buildStageStrip();
+  computeStats();
+  renderList();
+  setInterval(checkServer, 15000);
+}
+
+async function checkServer() {
+  try {
+    const r = await fetch(`${API}/health`, {signal: AbortSignal.timeout(3000)});
+    const d = await r.json();
+    serverLive = true;
+    document.getElementById('sDot').className = 'dot live';
+    document.getElementById('sTxt').textContent = `Live · ${d.prospect_count||'?'} prospects`;
+    document.getElementById('offlineBar').classList.remove('show');
+    await loadFromServer();
+  } catch {
+    serverLive = false;
+    document.getElementById('sDot').className = 'dot dead';
+    document.getElementById('sTxt').textContent = 'Demo mode';
+    document.getElementById('offlineBar').classList.add('show');
+  }
+}
+
+async function loadFromServer() {
+  try {
+    const r = await fetch(`${API}/prospects`);
+    const d = await r.json();
+    if ((d.prospects||[]).length > 0) {
+      allP = d.prospects;
+      filtered = [...allP];
+      computeStats();
+      renderList();
+    }
+  } catch {}
+}
+
+// ── STATS ──
+function computeStats() {
+  const tot = allP.length;
+  const val = allP.reduce((s,p) => s+(p.amount||0), 0);
+  document.getElementById('sAll').textContent = tot;
+  document.getElementById('pipeVal').textContent = '$'+val.toLocaleString('en-US',{minimumFractionDigits:0,maximumFractionDigits:0});
+  STAGES.forEach(s => {
+    const el = document.getElementById('s'+s.charAt(0)+s.slice(1).toLowerCase().replace(/_([a-z])/g,(_,c)=>c.toUpperCase()));
+    if (el) el.textContent = allP.filter(p=>p.stage===s).length;
+  });
+  // fix IDs
+  ['Identified','Enriched','Contacted','Responded','Agreement_sent','Signed','Filed','Paid','Closed'].forEach(k => {
+    const el = document.getElementById('s'+k);
+    const stg = k.toUpperCase();
+    if (el) el.textContent = allP.filter(p=>p.stage===stg).length;
+  });
+}
+
+// ── STAGE STRIP ──
+function buildStageStrip() {
+  const c = document.getElementById('stageStrip');
+  c.innerHTML = ['ALL',...STAGES].map(s =>
+    `<div class="stage-pill ${s==='ALL'?'active':''}" onclick="filterStage('${s}')">${s==='ALL'?'All':s.replace(/_/g,' ')}</div>`
+  ).join('');
+}
+
+function filterStage(s) {
+  stageFilter = s;
+  document.querySelectorAll('.stage-pill').forEach(p => {
+    const txt = p.textContent.trim();
+    p.classList.toggle('active', s==='ALL' ? txt==='All' : txt===s.replace(/_/g,' '));
+  });
+  document.querySelectorAll('.stat-chip').forEach((c,i) => {
+    const stages = ['ALL',...STAGES];
+    c.classList.toggle('active', stages[i]===s);
+  });
+  applyFilters();
+}
+
+function applyFilters() {
+  const q = document.getElementById('searchQ').value.toLowerCase();
+  filtered = allP.filter(p => {
+    const ms = stageFilter==='ALL' || p.stage===stageFilter;
+    const mq = !q || p.name.toLowerCase().includes(q) ||
+      (p.holder||'').toLowerCase().includes(q) ||
+      String(p.amount).includes(q) ||
+      (p.last_known_address||'').toLowerCase().includes(q);
+    return ms && mq;
+  }).sort((a,b)=>b.amount-a.amount);
+  renderList();
+}
+
+// ── PROSPECT LIST ──
+function renderList() {
+  const c = document.getElementById('prospectScroll');
+  if (!filtered.length) {
+    c.innerHTML = `<div style="padding:24px;text-align:center;color:var(--text-faint);font-size:11px">No prospects match</div>`;
+    return;
+  }
+  c.innerHTML = filtered.map(p => {
+    const sc = SC[p.stage]||{};
+    const isSel = selected?.property_id===p.property_id;
+    const isChk = selectedIds.has(p.property_id);
+    return `<div class="prospect-item ${isSel?'active':''}" onclick="selectP('${p.property_id}')">
+      <div class="p-row">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" ${isChk?'checked':''} onclick="event.stopPropagation();toggleCheck('${p.property_id}',this)" style="cursor:pointer">
+          <div class="p-name">${p.name}</div>
+        </div>
+        <div class="p-amount">$${(p.amount||0).toLocaleString('en-US',{maximumFractionDigits:0})}</div>
+      </div>
+      <div class="p-sub">${(p.holder||'').split(' ').slice(0,4).join(' ')} · ${p.property_type||''}</div>
+      <div class="stage-tag" style="background:${sc.bg};color:${sc.c}">${p.stage?.replace(/_/g,' ')}</div>
+      ${p.phone?`<div style="font-size:9px;color:var(--green);margin-top:4px">📞 ${p.phone}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleCheck(id, el) {
+  if (el.checked) selectedIds.add(id);
+  else selectedIds.delete(id);
+  updateBatchBar();
+}
+
+function updateBatchBar() {
+  const n = selectedIds.size;
+  document.getElementById('batchBar').classList.toggle('show', n > 0);
+  document.getElementById('batchCount').textContent = n;
+}
+
+function clearSelection() {
+  selectedIds.clear();
+  updateBatchBar();
+  renderList();
+}
+
+function selectByStage(stage) {
+  allP.filter(p=>p.stage===stage).forEach(p=>selectedIds.add(p.property_id));
+  updateBatchBar();
+  renderList();
+}
+
+function selectTopN(n) {
+  [...allP].sort((a,b)=>b.amount-a.amount).slice(0,n).forEach(p=>selectedIds.add(p.property_id));
+  updateBatchBar();
+  renderList();
+}
+
+// ── SELECT PROSPECT ──
+function selectP(id) {
+  selected = allP.find(p=>p.property_id===id);
+  renderList();
+  renderDetail();
+}
+
+// ── RENDER DETAIL ──
+function renderDetail() {
+  const p = selected;
+  if (!p) return;
+  const sc = SC[p.stage]||{};
+  const si = STAGES.indexOf(p.stage);
+  const fee = p.amount > 200000 ? 12 : 15;
+  const scripts = makeScripts(p);
+  window._scripts = scripts;
+  currentScript = 'call';
+
+  document.getElementById('detailPanel').innerHTML = `
+  <!-- HEADER -->
+  <div class="card fadeIn">
+    <div class="card-head">Prospect File #${p.property_id} <span class="stage-tag" style="background:${sc.bg};color:${sc.c}">${p.stage?.replace(/_/g,' ')}</span></div>
+    <div class="card-body">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:16px">
+        <div>
+          <div class="d-name">${p.name}</div>
+          <div style="font-size:10px;color:var(--text-dim);margin-top:4px">${p.last_known_address||'Address unknown'}</div>
+        </div>
+        <div style="text-align:right">
+          <div class="d-amount">$${(p.amount||0).toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+          <div class="d-fee">${fee}% fee = $${Math.round((p.amount||0)*fee/100).toLocaleString()}</div>
+        </div>
+      </div>
+      <div class="d-grid">
+        <div class="d-field"><div class="lbl">Holder</div><div class="val">${p.holder||'—'}</div></div>
+        <div class="d-field"><div class="lbl">Property Type</div><div class="val">${p.property_type||'—'}</div></div>
+        <div class="d-field"><div class="lbl">Priority</div><div class="val">${p.priority||'—'}</div></div>
+        <div class="d-field"><div class="lbl">Phone</div><div class="val" id="d-phone">${p.phone||'<span style="color:var(--red)">Not found</span>'}</div></div>
+        <div class="d-field"><div class="lbl">Email</div><div class="val">${p.email||'<span style="color:var(--text-faint)">Not found</span>'}</div></div>
+        <div class="d-field"><div class="lbl">Enriched</div><div class="val">${p.phone||p.email?'✓ Yes':'✗ Needs research'}</div></div>
+      </div>
+      <!-- CONTACT BUTTONS -->
+      <div class="contact-row">
+        ${p.phone
+          ? `<a class="contact-btn call" href="tel:${p.phone.replace(/\D/g,'')}" onclick="logAuto('${p.property_id}','Phone','Calling')">📞 Call ${p.phone}</a>`
+          : `<span class="contact-btn call disabled">📞 No phone</span>`}
+        ${p.email
+          ? `<button class="contact-btn email" onclick="openGmail('${p.property_id}')">✉ Open in Gmail</button>`
+          : `<span class="contact-btn email disabled">✉ No email</span>`}
+        ${p.phone
+          ? `<a class="contact-btn sms" href="sms:${p.phone.replace(/\D/g,'')}?body=${encodeURIComponent(makeScripts(p).sms)}" onclick="logAuto('${p.property_id}','SMS','Sent')">💬 SMS</a>`
+          : `<span class="contact-btn sms disabled">💬 No phone</span>`}
+        <button class="contact-btn find" onclick="openEnrich('${p.property_id}')">🔍 Find Info</button>
+      </div>
+      ${Object.keys(p.search_urls||{}).length ? `
+      <div class="url-chips">
+        ${Object.entries(p.search_urls).map(([k,v])=>`<a class="url-chip" href="${v}" target="_blank">↗ ${k}</a>`).join('')}
+      </div>` : ''}
+    </div>
+  </div>
+
+  <!-- PIPELINE -->
+  <div class="card fadeIn">
+    <div class="card-head">Pipeline Stage</div>
+    <div class="card-body" style="overflow-x:auto">
+      <div class="stepper">
+        ${STAGES.map((s,i)=>`
+          ${i>0?`<div class="sline ${i<=si?'done':''}"></div>`:''}
+          <div class="step ${i<si?'done':i===si?'cur':''}" onclick="setStage('${p.property_id}','${s}')" title="${s}">
+            <div class="c">${i<si?'✓':i+1}</div>
+            <div class="sn">${s.replace(/_/g,' ')}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <div class="card fadeIn">
+    <div class="card-head">Outreach Scripts
+      <div style="display:flex;gap:6px">
+        ${p.email?`<button class="act-btn primary" onclick="openGmail('${p.property_id}')" style="padding:4px 10px;font-size:9px">✉ Open Gmail</button>`:''}
+        ${p.phone?`<a class="act-btn green" href="tel:${p.phone.replace(/\D/g,'')}" style="padding:4px 10px;font-size:9px;text-decoration:none" onclick="logAuto('${p.property_id}','Phone','Calling')">📞 Dial</a>`:''}
+      </div>
+    </div>
+    <div class="script-tabs">
+      <div class="stab active" id="st-call" onclick="switchTab('call')">☏ Cold Call</div>
+      <div class="stab" id="st-email" onclick="switchTab('email')">✉ Email</div>
+      <div class="stab" id="st-sms" onclick="switchTab('sms')">💬 SMS</div>
+    </div>
+    <div style="position:relative">
+      <div class="script-box" id="scriptBox">${scripts.call}</div>
+      <button class="copy-chip" id="copyChip" onclick="copyScript()">Copy</button>
+    </div>
+    <div class="gmail-row" style="padding:0 14px 12px">
+      ${p.email
+        ? `<button class="gmail-btn" onclick="openGmail('${p.property_id}')">G Open Pre-filled Gmail Compose</button>`
+        : `<span style="font-size:10px;color:var(--text-faint)">Add email address to enable Gmail compose</span>`}
+    </div>
+  </div>
+
+  <!-- AI COACHING -->
+  <div class="card fadeIn">
+    <div class="card-head">◈ AI Coach <button class="act-btn" style="padding:4px 10px;font-size:9px" onclick="getCoaching()">Ask Claude</button></div>
+    <div class="card-body">
+      <div class="coach-box" id="coachBox"><span style="color:var(--text-faint);font-style:italic">Click "Ask Claude" for a personalized pitch strategy for this prospect.</span></div>
+    </div>
+  </div>
+
+  <!-- CONTACT LOG -->
+  <div class="card fadeIn">
+    <div class="card-head">Contact Log (${(p.contact_log||[]).length})</div>
+    <div class="card-body">
+      ${(p.contact_log||[]).length ? `
+      <table class="log-tbl">
+        <thead><tr><th>Date</th><th>Method</th><th>Outcome</th><th>Notes</th></tr></thead>
+        <tbody>${(p.contact_log||[]).slice().reverse().map(l=>`<tr>
+          <td style="color:var(--text-faint);white-space:nowrap">${l.date||'—'}</td>
+          <td>${l.method||'—'}</td>
+          <td><span class="badge ${/answer|sent|sign|paid/i.test(l.outcome)?'pos':/no|void|fail/i.test(l.outcome)?'neg':'neu'}">${l.outcome||'—'}</span></td>
+          <td style="color:var(--text-dim)">${l.notes||''}</td>
+        </tr>`).join('')}</tbody>
+      </table>` : `<div style="color:var(--text-faint);font-size:11px">No contact logged yet.</div>`}
+      <div class="log-form">
+        <select id="lMethod"><option>Phone</option><option>Email</option><option>SMS</option><option>In Person</option></select>
+        <select id="lOutcome"><option>Answered</option><option>No Answer</option><option>Left Voicemail</option><option>Sent</option><option>Replied</option><option>Not Interested</option><option>Agreement Sent</option><option>Signed</option><option>Paid</option></select>
+        <input id="lNotes" type="text" placeholder="Notes...">
+        <button class="act-btn primary" onclick="logContact('${p.property_id}')">Log</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACTIONS -->
+  <div class="card fadeIn">
+    <div class="card-head">Actions</div>
+    <div class="card-body">
+      <div class="act-row">
+        <button class="act-btn green" onclick="genContract('${p.property_id}')">⬇ Contract PDF</button>
+        <button class="act-btn" onclick="copyScript()">Copy Script</button>
+        <button class="act-btn" onclick="openEnrich('${p.property_id}')">🔍 Find Contact Info</button>
+        <button class="act-btn" onclick="editContactInfo('${p.property_id}')">✏ Edit Contact</button>
+      </div>
+      <div style="margin-top:12px">
+        <div style="font-size:9px;text-transform:uppercase;letter-spacing:.1em;color:var(--text-faint);margin-bottom:5px">Notes</div>
+        <textarea class="notes-ta" id="pNotes" onblur="saveNotes('${p.property_id}')">${p.notes||''}</textarea>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── SCRIPTS ──
+function holderType(h) {
+  h = (h||'').toUpperCase();
+  if (/INSURANCE|LIFE|BRIGHTHOUSE|NATIONWIDE/.test(h)) return 'insurance';
+  if (/COINBASE|CRYPTO|AMERITRADE|ROBINHOOD|SCHWAB/.test(h)) return 'investment';
+  if (/BANK|NATIONAL BANK|CREDIT UNION/.test(h)) return 'bank';
+  if (/ENERGY|UTILITY|GAS|ELECTRIC/.test(h)) return 'utility';
+  return 'general';
+}
+
+function makeScripts(p) {
+  const type = holderType(p.holder);
+  const fee = p.amount > 200000 ? 12 : 15;
+  const feeAmt = Math.round((p.amount||0)*fee/100).toLocaleString();
+  const amt = (p.amount||0).toLocaleString('en-US',{maximumFractionDigits:0});
+  const fn = p.name.split(' ')[0];
+
+  const openers = {
+    insurance: `I located an outstanding file from ${p.holder} — it appears to be a life insurance or benefit payout — that belongs to you, which has been transferred to the Wisconsin state treasury.`,
+    investment: `I found an outstanding account record from ${p.holder} with your name on it — approximately $${amt} — which has been absorbed into the Wisconsin unclaimed property treasury.`,
+    bank: `I've located a dormant bank account record associated with ${p.holder} — roughly $${amt} — sitting unclaimed in the Wisconsin state treasury.`,
+    utility: `I found an unclaimed utility refund or stock distribution from ${p.holder} — approximately $${amt} — that's been transferred to Wisconsin's unclaimed property division.`,
+    general: `I found an outstanding financial asset from ${p.holder} — approximately $${amt} — that belongs to you and has been transferred to the Wisconsin state treasury for safekeeping.`
+  };
+
+  const call = `THE Z-WAY CALL — ${p.name.toUpperCase()}
+
+"Hi, is this ${fn}?... Hi ${fn}, this is [Your Name] from ZGroup."
+
+${openers[type]}
+
+"Have you received any notices from the state about this?"
+
+[PAUSE — listen]
+
+"I want to be upfront with you. The state is holding this money and you have every right to claim it yourself at no cost on the Wisconsin state website. Some people do exactly that.
+
+The state process involves affidavits, notarization, and 3-6 months of follow-up. We handle all of that. Our fee is ${fee}% — that's $${feeAmt} — and we only get paid when the check is in your hands. Zero upfront cost, ever.
+
+Does that sound like something you'd want us to handle?"
+
+[YES]: "Great. Let me confirm a couple quick details and I'll send our one-page agreement tonight. What's the best email for you?"
+[NO]: "Completely understood. If the process gets complicated, don't hesitate to call me back. Have a great day."`;
+
+  const email = `Subject: ${p.name} — Outstanding Asset with Wisconsin Treasury ($${amt})
+
+Hi ${fn},
+
+I'm reaching out about an unclaimed financial asset associated with your name — approximately $${amt} from ${p.holder} — currently held by the Wisconsin Department of Revenue Unclaimed Property Division.
+
+You have the full legal right to claim this yourself at no cost through the state website. I want to be transparent about that.
+
+The process involves affidavits, notarizations, and several months of follow-up. ZGroup specializes in handling exactly this on behalf of claimants.
+
+Our model: ${fee}% contingency fee, zero upfront cost. You only pay if we recover.
+
+I can send you the official state record confirming your asset to verify before committing to anything.
+
+Reply or call [Phone] if you'd like to see it.
+
+Best,
+[Your Name]
+ZGroup LLC — Wisconsin Asset Locator`;
+
+  const sms = `Hi ${fn}, this is [Name] from ZGroup. I found a $${amt} asset from ${p.holder} in the WI state treasury under your name. Can send the official record to verify — no cost to look. Reply YES.`;
+
+  return { call, email, sms };
+}
+
+function switchTab(t) {
+  currentScript = t;
+  ['call','email','sms'].forEach(s => document.getElementById('st-'+s)?.classList.toggle('active', s===t));
+  const box = document.getElementById('scriptBox');
+  if (box && window._scripts) box.textContent = window._scripts[t];
+}
+
+function copyScript() {
+  const box = document.getElementById('scriptBox');
+  if (!box) return;
+  navigator.clipboard.writeText(box.textContent).then(() => {
+    const btn = document.getElementById('copyChip');
+    btn.textContent = '✓ Copied';
+    btn.classList.add('ok');
+    setTimeout(() => { btn.textContent='Copy'; btn.classList.remove('ok'); }, 2000);
+  });
+}
+
+// ── GMAIL COMPOSE ──
+function openGmail(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p || !p.email) { alert('No email address on file. Add one via Edit Contact.'); return; }
+  const s = makeScripts(p);
+  const subject = encodeURIComponent(`${p.name} — Outstanding Asset with Wisconsin Treasury`);
+  const body = encodeURIComponent(s.email.replace(/^Subject:.*\n\n/,''));
+  const url = `https://mail.google.com/mail/?view=cm&fs=1&to=${encodeURIComponent(p.email)}&su=${subject}&body=${body}`;
+  window.open(url, '_blank');
+  logAuto(propId, 'Email', 'Gmail Compose Opened');
+}
+
+function batchEmailAll() {
+  const ids = Array.from(selectedIds);
+  if (!ids.length) return;
+  let opened = 0;
+  ids.forEach((id, i) => {
+    const p = allP.find(x=>x.property_id===id);
+    if (p?.email) {
+      setTimeout(() => { openGmail(id); }, i * 600);
+      opened++;
+    }
+  });
+  if (opened === 0) alert('None of the selected prospects have email addresses on file. Enrich them first.');
+  else alert(`Opening ${opened} Gmail compose windows (${ids.length - opened} skipped — no email).`);
+}
+
+function generateBatchScripts() {
+  const ids = Array.from(selectedIds);
+  const all = ids.map(id => {
+    const p = allP.find(x=>x.property_id===id);
+    if (!p) return '';
+    const s = makeScripts(p);
+    return `=== ${p.name} ($${(p.amount||0).toLocaleString()}) ===\n${s.email}`;
+  }).join('\n\n---\n\n');
+  navigator.clipboard.writeText(all).then(() => alert(`${ids.length} email scripts copied to clipboard.`));
+}
+
+// ── STAGE ──
+async function setStage(propId, stage) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  p.stage = stage;
+  computeStats();
+  renderList();
+  renderDetail();
+  if (serverLive) {
+    try {
+      await fetch(`${API}/crm/update_stage`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({property_id:propId,stage,notes:''})});
+    } catch {}
+  }
+}
+
+// ── CONTACT LOG ──
+function logAuto(propId, method, outcome) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  if (!p.contact_log) p.contact_log = [];
+  p.contact_log.push({method, outcome, date: new Date().toISOString().split('T')[0], notes: 'Auto-logged'});
+  // auto-advance stage
+  if (outcome === 'Calling' && p.stage === 'IDENTIFIED') setStage(propId, 'CONTACTED');
+  if (outcome === 'Gmail Compose Opened' && p.stage === 'IDENTIFIED') setStage(propId, 'CONTACTED');
+}
+
+async function logContact(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  const method = document.getElementById('lMethod').value;
+  const outcome = document.getElementById('lOutcome').value;
+  const notes = document.getElementById('lNotes').value;
+  if (!p.contact_log) p.contact_log = [];
+  p.contact_log.push({method, outcome, notes, date: new Date().toISOString().split('T')[0]});
+  document.getElementById('lNotes').value = '';
+  // AUTO-STAGE ADVANCEMENT
+  const autoStage = {
+    'Answered': 'CONTACTED', 'Sent': 'CONTACTED', 'Replied': 'RESPONDED',
+    'Agreement Sent': 'AGREEMENT_SENT', 'Signed': 'SIGNED', 'Paid': 'PAID'
+  };
+  if (autoStage[outcome]) await setStage(propId, autoStage[outcome]);
+  else { renderDetail(); renderList(); }
+  if (serverLive) {
+    try {
+      await fetch(`${API}/crm/log_contact`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({property_id:propId,method,outcome,notes})});
+    } catch {}
+  }
+}
+
+// ── EDIT CONTACT ──
+function editContactInfo(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  const phone = prompt('Phone number:', p.phone||'');
+  if (phone !== null) p.phone = phone;
+  const email = prompt('Email address:', p.email||'');
+  if (email !== null) {
+    p.email = email;
+    if (email && p.stage === 'IDENTIFIED') setStage(propId, 'ENRICHED');
+  }
+  renderDetail();
+  renderList();
+}
+
+// ── ENRICHMENT ──
+function openEnrich(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  const urls = p.search_urls||{};
+  if (Object.keys(urls).length) {
+    Object.values(urls).forEach(u => window.open(u, '_blank'));
+  } else {
+    const n = encodeURIComponent(p.name);
+    const city = (p.last_known_address||'').split(',')[1]?.trim()||'Wisconsin';
+    window.open(`https://www.whitepages.com/name/${p.name.replace(/\s+/g,'-')}/WI`,'_blank');
+    window.open(`https://www.truepeoplesearch.com/results?name=${n}&citystatezip=${encodeURIComponent(city)}+WI`,'_blank');
+  }
+}
+
+// ── NOTES ──
+function saveNotes(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (p) p.notes = document.getElementById('pNotes')?.value||'';
+}
+
+// ── CONTRACT ──
+async function genContract(propId) {
+  const p = allP.find(x=>x.property_id===propId);
+  if (!p) return;
+  if (serverLive) {
+    try {
+      const r = await fetch(`${API}/contract/generate`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({property_id:propId,fee_pct:15})});
+      const d = await r.json();
+      if (d.path) { alert(`Contract saved to: ${d.path}`); return; }
+    } catch {}
+  }
+  const fee = p.amount > 200000 ? 12 : 15;
+  const txt = `ZGROUP LLC — CONTINGENCY AGREEMENT\n${'─'.repeat(50)}\n\nDate: ${new Date().toLocaleDateString()}\nProperty ID: ${p.property_id}\n\nCLAIMANT: ${p.name}\nAddress: ${p.last_known_address}\n\nASSET DETAILS\nOriginal Holder: ${p.holder}\nProperty Type:   ${p.property_type}\nEstimated Value: $${(p.amount||0).toLocaleString('en-US',{minimumFractionDigits:2})}\n\nTERMS\n1. ZGroup LLC ("Locator") will file all required paperwork with the Wisconsin\n   Department of Revenue Unclaimed Property Division on Claimant's behalf.\n2. Contingency Fee: ${fee}% of recovered amount — payable ONLY upon successful recovery.\n3. No upfront cost to Claimant under any circumstances.\n4. Claimant retains full right to terminate this agreement at any time before filing.\n\n${'─'.repeat(50)}\nClaimant Signature: _________________________ Date: __________\n\nZGroup Representative: ______________________ Date: __________\n${'─'.repeat(50)}\n\nZGroup LLC · Wisconsin Licensed Asset Locator`;
+  const blob = new Blob([txt],{type:'text/plain'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href=url; a.download=`ZGroup_Agreement_${p.name.replace(/\s/g,'_')}.txt`; a.click();
+  setStage(propId,'AGREEMENT_SENT');
+}
+
+// ── AI COACHING ──
+async function getCoaching() {
+  if (!selected) return;
+  const p = selected;
+  const box = document.getElementById('coachBox');
+  box.innerHTML = '<span class="spinner"></span> Asking Claude...';
+  box.classList.add('loading');
+  const prompt = `You are a sharp, tactical asset recovery coach for ZGroup, a Wisconsin unclaimed property finder.
+
+Prospect: ${p.name}
+Amount: $${(p.amount||0).toLocaleString()}
+Asset Type: ${p.property_type}
+Holder: ${p.holder}
+Current Stage: ${p.stage}
+Contact history: ${JSON.stringify(p.contact_log||[])}
+Notes: ${p.notes||'None'}
+
+Give me 3-4 sentences max. Be specific and tactical:
+1. Best opening angle for THIS asset type and holder
+2. Most likely objection and the exact counter
+3. Single best next action right now
+
+No fluff. No generic advice.`;
+
+  try {
+    const r = await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:prompt}]})
+    });
+    const d = await r.json();
+    box.textContent = d.content?.[0]?.text||'No response';
+    box.classList.remove('loading');
+  } catch(e) {
+    box.textContent = `API unavailable in this context. Open from claude.ai for AI coaching. (${e.message})`;
+    box.classList.remove('loading');
+  }
+}
+
+// ── CSV IMPORT ──
+function openImport() { document.getElementById('importModal').classList.add('open'); }
+function closeImport() { document.getElementById('importModal').classList.remove('open'); }
+function openBatchModal() { document.getElementById('batchModal').classList.add('open'); }
+
+function handleDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('dragover');
+  const file = e.dataTransfer.files[0];
+  if (file) parseCSV(file);
+}
+
+function handleFileSelect(input) {
+  if (input.files[0]) parseCSV(input.files[0]);
+}
+
+function parseCSV(file) {
+  const reader = new FileReader();
+  reader.onload = e => {
+    const lines = e.target.result.split('\n').filter(l=>l.trim());
+    if (!lines.length) return;
+    const headers = lines[0].split(',').map(h=>h.trim().replace(/^"|"$/g,'').toLowerCase());
+    rawCsvRows = lines.slice(1).map(line => {
+      const vals = smartSplit(line);
+      const obj = {};
+      headers.forEach((h,i) => obj[h] = (vals[i]||'').trim().replace(/^"|"$/g,''));
+      return obj;
+    }).filter(r => r.lastname || r['last name'] || r.name);
+    applyImportFilter();
+  };
+  reader.readAsText(file);
+}
+
+function smartSplit(line) {
+  const result = []; let cur = ''; let inQ = false;
+  for (const ch of line) {
+    if (ch==='"') inQ=!inQ;
+    else if (ch===',' && !inQ) { result.push(cur); cur=''; }
+    else cur+=ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+function applyImportFilter() {
+  const minAmt = parseFloat(document.getElementById('minAmt').value)||0;
+  const maxRows = parseInt(document.getElementById('maxRows').value)||200;
+  filteredCsvRows = rawCsvRows.map(r => {
+    const amtStr = r.amount||r['reported value']||r.value||'0';
+    const amt = parseFloat(amtStr.replace(/[$,]/g,''))||0;
+    const last = r.lastname||r['last name']||'';
+    const first = r.firstname||r['first name']||'';
+    const name = r.name||(first+' '+last).trim();
+    return {
+      name, amount: amt,
+      holder: r.holder||r['holder name']||'',
+      property_type: r['property type']||r.propertytype||'',
+      address: [r.address, r.city, r.state||'WI', r.zip].filter(Boolean).join(', '),
+      property_id: r['property id']||r.propertyid||String(Date.now()+Math.random()),
+      _raw: r
+    };
+  }).filter(r => r.amount >= minAmt).sort((a,b)=>b.amount-a.amount).slice(0,maxRows);
+
+  importSelections = new Set(filteredCsvRows.map(r=>r.property_id));
+  renderImportPreview();
+}
+
+function renderImportPreview() {
+  const rows = filteredCsvRows;
+  const wrap = document.getElementById('previewWrap');
+  const sum = document.getElementById('importSummary');
+  const btn = document.getElementById('importBtn');
+  if (!rows.length) {
+    wrap.innerHTML = `<div style="padding:20px;text-align:center;color:var(--text-faint);font-size:11px">No rows match the filters. Try lowering the minimum amount.</div>`;
+    btn.disabled = true;
+    sum.style.display = 'none';
+    return;
+  }
+  const totalVal = rows.reduce((s,r)=>s+r.amount,0);
+  sum.innerHTML = `Found <strong>${rows.length} prospects</strong> totaling <strong>$${totalVal.toLocaleString('en-US',{maximumFractionDigits:0})}</strong> in potential assets.`;
+  sum.style.display = 'block';
+  btn.disabled = false;
+  wrap.innerHTML = `<table class="preview-tbl">
+    <thead><tr>
+      <th><input type="checkbox" checked onchange="toggleAllImport(this)"></th>
+      <th>Name</th><th>Amount</th><th>Holder</th><th>Type</th>
+    </tr></thead>
+    <tbody>${rows.map(r=>`<tr>
+      <td><input type="checkbox" ${importSelections.has(r.property_id)?'checked':''} onchange="toggleImportRow('${r.property_id}',this)"></td>
+      <td>${r.name}</td>
+      <td style="color:var(--green);font-family:var(--serif);font-style:italic">$${r.amount.toLocaleString('en-US',{maximumFractionDigits:0})}</td>
+      <td style="font-size:10px;color:var(--text-dim)">${r.holder}</td>
+      <td style="font-size:10px;color:var(--text-faint)">${r.property_type}</td>
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function toggleAllImport(cb) {
+  if (cb.checked) filteredCsvRows.forEach(r=>importSelections.add(r.property_id));
+  else importSelections.clear();
+  renderImportPreview();
+}
+
+function toggleImportRow(id, cb) {
+  if (cb.checked) importSelections.add(id);
+  else importSelections.delete(id);
+}
+
+async function doImport() {
+  const toImport = filteredCsvRows.filter(r=>importSelections.has(r.property_id));
+  let added = 0;
+  toImport.forEach(r => {
+    if (allP.find(p=>p.property_id===r.property_id)) return;
+    const name = r.name;
+    const nameParts = name.split(' ');
+    const fn = nameParts[0];
+    const searchName = encodeURIComponent(name);
+    const city = r.address.split(',')[1]?.trim()||'Wisconsin';
+    allP.push({
+      property_id: r.property_id,
+      name,
+      last_known_address: r.address,
+      amount: r.amount,
+      property_type: r.property_type,
+      holder: r.holder,
+      priority: r.amount > 100000 ? 'HIGH' : r.amount > 25000 ? 'MEDIUM' : 'LOW',
+      stage: 'IDENTIFIED',
+      phone: null, email: null, notes: '',
+      contact_log: [],
+      search_urls: {
+        whitepages: `https://www.whitepages.com/name/${name.replace(/\s+/g,'-')}/WI`,
+        truepeoplesearch: `https://www.truepeoplesearch.com/results?name=${searchName}&citystatezip=${encodeURIComponent(city)}+WI`,
+        fastpeoplesearch: `https://www.fastpeoplesearch.com/name/${name.replace(/\s+/g,'_')}_WI`
+      }
+    });
+    added++;
+    if (serverLive) {
+      fetch(`${API}/prospects`, {method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({property_id:r.property_id,name,last_known_address:r.address,amount:r.amount,property_type:r.property_type,holder:r.holder,priority:'HIGH',stage:'IDENTIFIED'})
+      }).catch(()=>{});
+    }
+  });
+  filtered = [...allP];
+  computeStats();
+  renderList();
+  closeImport();
+  alert(`✓ Imported ${added} prospects. ${toImport.length - added} skipped (already in pipeline).`);
+}
+
+init();
+</script>
+</body>
+</html>

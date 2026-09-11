@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeirBud — Command Deck</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  :root {
+    --ink: #0a0a0c;
+    --panel: #141418;
+    --panel-2: #1c1c22;
+    --line: #2a2a32;
+    --paper: #ece7dd;
+    --muted: #7a7a86;
+    --gold: #d4a534;
+    --gold-bright: #f0c14b;
+    --green: #4caf7e;
+    --red: #e0533d;
+    --blue: #5b8fc7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height: 100vh;
+    line-height: 1.5;
+  }
+
+  /* ── MASTHEAD ── */
+  .masthead {
+    border-bottom: 1px solid var(--line);
+    padding: 24px 32px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    background: linear-gradient(180deg, var(--panel) 0%, var(--ink) 100%);
+  }
+
+  .brand {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .brand h1 {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 34px;
+    letter-spacing: -0.02em;
+    color: var(--paper);
+    line-height: 1;
+  }
+
+  .brand h1 span { color: var(--gold); }
+
+  .brand .tagline {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.25em;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  .status-cluster {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .pulse {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+  }
+
+  .dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 12px var(--green);
+    animation: breathe 2s ease-in-out infinite;
+  }
+
+  @keyframes breathe {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .clock {
+    font-size: 11px;
+    color: var(--gold);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── REVENUE BANNER ── */
+  .revenue-banner {
+    padding: 40px 32px;
+    border-bottom: 1px solid var(--line);
+    display: grid;
+    grid-template-columns: 1.4fr 1fr;
+    gap: 48px;
+    align-items: center;
+    background:
+      radial-gradient(ellipse at top left, rgba(212,165,52,0.06), transparent 60%);
+  }
+
+  .pipeline-value .label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.2em;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+
+  .pipeline-value .figure {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 72px;
+    line-height: 0.9;
+    color: var(--paper);
+    letter-spacing: -0.03em;
+  }
+
+  .pipeline-value .figure .cents {
+    font-size: 36px;
+    color: var(--gold);
+    vertical-align: super;
+  }
+
+  .pipeline-value .sub {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 12px;
+  }
+
+  .pipeline-value .sub strong { color: var(--gold-bright); }
+
+  .projection {
+    border-left: 1px solid var(--line);
+    padding-left: 48px;
+  }
+
+  .projection .row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(42,42,50,0.5);
+  }
+
+  .projection .row:last-child { border-bottom: none; }
+
+  .projection .row .k {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .projection .row .v {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 22px;
+    color: var(--paper);
+  }
+
+  .projection .row .v.gold { color: var(--gold-bright); }
+
+  /* ── FUNNEL STRIP ── */
+  .funnel {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    border-bottom: 1px solid var(--line);
+  }
+
+  .funnel-stage {
+    padding: 24px 20px;
+    border-right: 1px solid var(--line);
+    position: relative;
+    transition: background 0.3s;
+  }
+
+  .funnel-stage:last-child { border-right: none; }
+  .funnel-stage:hover { background: var(--panel); }
+
+  .funnel-stage .num {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 40px;
+    color: var(--paper);
+    line-height: 1;
+  }
+
+  .funnel-stage .stage-name {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--muted);
+    margin-top: 8px;
+  }
+
+  .funnel-stage .conv {
+    font-size: 11px;
+    color: var(--gold);
+    margin-top: 4px;
+  }
+
+  .funnel-stage .eyebrow {
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    font-size: 9px;
+    color: var(--line);
+    font-weight: 600;
+  }
+
+  /* ── MAIN GRID ── */
+  .deck {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 0;
+  }
+
+  .col {
+    padding: 28px 32px;
+  }
+
+  .col.left { border-right: 1px solid var(--line); }
+
+  .section-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+  }
+
+  .section-head h2 {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--paper);
+  }
+
+  .section-head .count {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+
+  /* ── PROSPECT CARDS ── */
+  .prospect {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 18px 20px;
+    margin-bottom: 12px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 16px;
+    align-items: center;
+    transition: all 0.2s;
+    cursor: pointer;
+  }
+
+  .prospect:hover {
+    border-color: var(--gold);
+    transform: translateX(4px);
+  }
+
+  .prospect .name {
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: 18px;
+    color: var(--paper);
+  }
+
+  .prospect .meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  .prospect .amount {
+    font-family: 'Fraunces', serif;
+    font-weight: 900;
+    font-size: 24px;
+    color: var(--gold-bright);
+    text-align: right;
+  }
+
+  .prospect .fee {
+    font-size: 10px;
+    color: var(--green);
+    text-align: right;
+    margin-top: 2px;
+  }
+
+  .tier-tag {
+    display: inline-block;
+    font-size: 9px;
+    padding: 2px 8px;
+    border-radius: 100px;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    margin-right: 8px;
+  }
+
+  .tier-ultra { background: rgba(240,193,75,0.15); color: var(--gold-bright); border: 1px solid var(--gold); }
+  .tier-high { background: rgba(91,143,199,0.15); color: var(--blue); border: 1px solid var(--blue); }
+
+  /* ── STATUS LIST ── */
+  .status-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(42,42,50,0.5);
+    font-size: 13px;
+  }
+
+  .status-item .badge {
+    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 600;
+    min-width: 80px;
+    text-align: center;
+  }
+
+  .badge.sent { background: rgba(91,143,199,0.15); color: var(--blue); }
+  .badge.responded { background: rgba(76,175,126,0.15); color: var(--green); }
+  .badge.claimed { background: rgba(240,193,75,0.15); color: var(--gold-bright); }
+  .badge.paid { background: var(--green); color: var(--ink); }
+
+  .status-item .who { color: var(--paper); flex: 1; }
+  .status-item .when { color: var(--muted); font-size: 11px; }
+
+  /* ── ACTION QUEUE ── */
+  .action {
+    background: var(--panel-2);
+    border-left: 3px solid var(--gold);
+    padding: 14px 18px;
+    margin-bottom: 10px;
+    border-radius: 2px;
+  }
+
+  .action .action-type {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--gold);
+    margin-bottom: 4px;
+  }
+
+  .action .action-desc {
+    font-size: 13px;
+    color: var(--paper);
+  }
+
+  .action .action-meta {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 6px;
+  }
+
+  /* ── FOOTER BAR ── */
+  .footer-bar {
+    border-top: 1px solid var(--line);
+    padding: 20px 32px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--muted);
+    background: var(--panel);
+  }
+
+  .footer-bar .legend {
+    display: flex;
+    gap: 24px;
+  }
+
+  .footer-bar .legend span {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .mini-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+
+  @media (max-width: 900px) {
+    .revenue-banner { grid-template-columns: 1fr; gap: 24px; }
+    .projection { border-left: none; padding-left: 0; border-top: 1px solid var(--line); padding-top: 24px; }
+    .funnel { grid-template-columns: repeat(2, 1fr); }
+    .deck { grid-template-columns: 1fr; }
+    .col.left { border-right: none; border-bottom: 1px solid var(--line); }
+    .pipeline-value .figure { font-size: 52px; }
+  }
+</style>
+</head>
+<body>
+
+  <!-- MASTHEAD -->
+  <header class="masthead">
+    <div class="brand">
+      <h1>Heir<span>Bud</span></h1>
+      <div class="tagline">Unclaimed Property · Command Deck</div>
+    </div>
+    <div class="status-cluster">
+      <div class="pulse">
+        <span class="dot"></span>
+        Automation Live
+      </div>
+      <div class="clock" id="clock">—</div>
+    </div>
+  </header>
+
+  <!-- REVENUE BANNER -->
+  <section class="revenue-banner">
+    <div class="pipeline-value">
+      <div class="label">Total Pipeline Value · Wisconsin</div>
+      <div class="figure" id="pipelineValue">$0<span class="cents">.00</span></div>
+      <div class="sub">Across <strong id="recordCount">0</strong> HIGH-priority prospects · Est. fees at 12% avg: <strong id="estFees">$0</strong></div>
+    </div>
+    <div class="projection">
+      <div class="row">
+        <span class="k">Emails Sent</span>
+        <span class="v" id="emailsSent">0</span>
+      </div>
+      <div class="row">
+        <span class="k">Responses</span>
+        <span class="v" id="responses">0</span>
+      </div>
+      <div class="row">
+        <span class="k">Claims Filed</span>
+        <span class="v gold" id="claimsFiled">0</span>
+      </div>
+      <div class="row">
+        <span class="k">Revenue Collected</span>
+        <span class="v gold" id="revenue">$0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FUNNEL -->
+  <section class="funnel">
+    <div class="funnel-stage">
+      <div class="eyebrow">01</div>
+      <div class="num" id="fContacted">0</div>
+      <div class="stage-name">Contacted</div>
+    </div>
+    <div class="funnel-stage">
+      <div class="eyebrow">02</div>
+      <div class="num" id="fResponded">0</div>
+      <div class="stage-name">Responded</div>
+      <div class="conv" id="cResponded">—</div>
+    </div>
+    <div class="funnel-stage">
+      <div class="eyebrow">03</div>
+      <div class="num" id="fInterested">0</div>
+      <div class="stage-name">Interested</div>
+      <div class="conv" id="cInterested">—</div>
+    </div>
+    <div class="funnel-stage">
+      <div class="eyebrow">04</div>
+      <div class="num" id="fClaimed">0</div>
+      <div class="stage-name">Claimed</div>
+      <div class="conv" id="cClaimed">—</div>
+    </div>
+    <div class="funnel-stage">
+      <div class="eyebrow">05</div>
+      <div class="num" id="fPaid">0</div>
+      <div class="stage-name">Paid</div>
+      <div class="conv" id="cPaid">—</div>
+    </div>
+  </section>
+
+  <!-- MAIN DECK -->
+  <div class="deck">
+    <div class="col left">
+      <div class="section-head">
+        <h2>Top Prospects</h2>
+        <span class="count">By value · Wisconsin</span>
+      </div>
+      <div id="prospectList"></div>
+    </div>
+
+    <div class="col right">
+      <div class="section-head">
+        <h2>Today's Action Queue</h2>
+        <span class="count" id="actionCount">0 items</span>
+      </div>
+      <div id="actionQueue"></div>
+
+      <div class="section-head" style="margin-top:32px;">
+        <h2>Recent Activity</h2>
+        <span class="count">Live feed</span>
+      </div>
+      <div id="activityFeed"></div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="footer-bar">
+    <div>HeirBud v2 · ZGroup LLC · Wisconsin Active</div>
+    <div class="legend">
+      <span><span class="mini-dot" style="background:var(--blue)"></span>Sent</span>
+      <span><span class="mini-dot" style="background:var(--green)"></span>Responded</span>
+      <span><span class="mini-dot" style="background:var(--gold-bright)"></span>Claimed</span>
+      <span><span class="mini-dot" style="background:var(--green);box-shadow:0 0 8px var(--green)"></span>Paid</span>
+    </div>
+  </footer>
+
+<script>
+  // ── DEMO DATA (replace with live Google Sheets / API feed) ──
+  const prospects = [
+    { name: 'Lorraine J. Vasser', city: 'Milwaukee', type: 'Life Insurance Benefit', amount: 744236.68, tier: 'ultra' },
+    { name: 'Yuming Gao', city: 'Waukesha', type: 'Investment Liquidation', amount: 693857.10, tier: 'ultra' },
+    { name: 'Jacqueline K. Ohman', city: 'Milwaukee', type: 'Investment Liquidation', amount: 340274.92, tier: 'ultra' },
+    { name: 'Lucille Kelly', city: 'Baldwin', type: 'Beneficiary Proceeds', amount: 316987.62, tier: 'ultra' },
+    { name: 'Walter T. Iverson', city: 'Coleman', type: "Cashier's Check", amount: 296501.90, tier: 'ultra' },
+    { name: 'Gokhan Kiyak', city: 'Franklin', type: 'Checking Account', amount: 296308.99, tier: 'ultra' },
+    { name: 'John Hoover', city: 'Hudson', type: 'Outstanding Checks', amount: 283265.10, tier: 'ultra' },
+    { name: 'William L. Pierce', city: 'Hayward', type: 'Investment Liquidation', amount: 264591.54, tier: 'ultra' },
+  ];
+
+  const activity = [
+    { status: 'paid', who: 'Margaret Sullivan', when: '2 hours ago' },
+    { status: 'claimed', who: 'Robert Chen', when: '5 hours ago' },
+    { status: 'responded', who: 'Patricia Williams', when: 'Yesterday' },
+    { status: 'sent', who: 'James Anderson', when: 'Yesterday' },
+    { status: 'responded', who: 'Linda Martinez', when: '2 days ago' },
+    { status: 'sent', who: 'David Thompson', when: '2 days ago' },
+  ];
+
+  const actions = [
+    { type: 'High-Value Call', desc: 'Phone Lorraine Vasser ($744K) — white-glove tier', meta: 'Ultra-high priority · 20% fee = $148,847' },
+    { type: 'Follow-Up Due', desc: '12 prospects need 2nd follow-up email', meta: 'Auto-sends at 10:00 AM' },
+    { type: 'Response Waiting', desc: '3 INTERESTED replies need claim instructions', meta: 'Auto-handled · review optional' },
+    { type: 'Payment Reminder', desc: '2 claims 60+ days old — fee reminder queued', meta: 'Sends at 5:00 PM' },
+  ];
+
+  // Metrics
+  const metrics = {
+    emailsSent: 487,
+    responses: 14,
+    interested: 9,
+    claimsFiled: 6,
+    paid: 3,
+    revenue: 1240,
+  };
+
+  // ── RENDER ──
+  function money(n) {
+    return '$' + n.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+  function moneyFull(n) {
+    return n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  }
+
+  // Pipeline total
+  const pipelineTotal = prospects.reduce((s, p) => s + p.amount, 0);
+  // Extrapolate: these 8 represent top slice; show realistic full pipeline
+  const fullPipeline = pipelineTotal * 3.2; // simulated full dataset
+  const parts = moneyFull(fullPipeline).split('.');
+  document.getElementById('pipelineValue').innerHTML =
+    '$' + parseInt(parts[0].replace(/,/g,'')).toLocaleString() + '<span class="cents">.' + parts[1] + '</span>';
+  document.getElementById('recordCount').textContent = '1,284';
+  document.getElementById('estFees').textContent = money(fullPipeline * 0.12);
+
+  document.getElementById('emailsSent').textContent = metrics.emailsSent;
+  document.getElementById('responses').textContent = metrics.responses;
+  document.getElementById('claimsFiled').textContent = metrics.claimsFiled;
+  document.getElementById('revenue').textContent = money(metrics.revenue);
+
+  // Funnel
+  document.getElementById('fContacted').textContent = metrics.emailsSent;
+  document.getElementById('fResponded').textContent = metrics.responses;
+  document.getElementById('fInterested').textContent = metrics.interested;
+  document.getElementById('fClaimed').textContent = metrics.claimsFiled;
+  document.getElementById('fPaid').textContent = metrics.paid;
+  document.getElementById('cResponded').textContent = (metrics.responses/metrics.emailsSent*100).toFixed(1) + '% conv';
+  document.getElementById('cInterested').textContent = (metrics.interested/metrics.responses*100).toFixed(0) + '% conv';
+  document.getElementById('cClaimed').textContent = (metrics.claimsFiled/metrics.interested*100).toFixed(0) + '% conv';
+  document.getElementById('cPaid').textContent = (metrics.paid/metrics.claimsFiled*100).toFixed(0) + '% conv';
+
+  // Prospects
+  const feeRate = { ultra: 0.20, high: 0.15 };
+  document.getElementById('prospectList').innerHTML = prospects.map(p => `
+    <div class="prospect">
+      <div>
+        <span class="tier-tag tier-${p.tier}">${p.tier === 'ultra' ? 'Ultra · 20%' : 'High · 15%'}</span>
+        <div class="name">${p.name}</div>
+        <div class="meta">${p.city}, WI · ${p.type}</div>
+      </div>
+      <div>
+        <div class="amount">$${moneyFull(p.amount)}</div>
+        <div class="fee">est. fee ${money(p.amount * feeRate[p.tier])}</div>
+      </div>
+    </div>
+  `).join('');
+
+  // Actions
+  document.getElementById('actionCount').textContent = actions.length + ' items';
+  document.getElementById('actionQueue').innerHTML = actions.map(a => `
+    <div class="action">
+      <div class="action-type">${a.type}</div>
+      <div class="action-desc">${a.desc}</div>
+      <div class="action-meta">${a.meta}</div>
+    </div>
+  `).join('');
+
+  // Activity
+  document.getElementById('activityFeed').innerHTML = activity.map(a => `
+    <div class="status-item">
+      <span class="badge ${a.status}">${a.status}</span>
+      <span class="who">${a.who}</span>
+      <span class="when">${a.when}</span>
+    </div>
+  `).join('');
+
+  // Clock
+  function tick() {
+    const now = new Date();
+    document.getElementById('clock').textContent =
+      now.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' · ' +
+      now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+  tick();
+  setInterval(tick, 30000);
+</script>
+</body>
+</html>

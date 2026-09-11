@@ -1,0 +1,671 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HeirBud Command Center</title>
+<style>
+  :root{
+    --paper:#f4f3ec;--surface:#fbfbf6;--surface2:#eeece2;--ink:#1a201b;--ink2:#474d45;
+    --faint:#7b8077;--line:#e1dfd3;--accent:#1c6b45;--accent2:#175838;--accent-soft:#e4efe8;
+    --gold:#8f7130;--amber:#8f5a14;--amber-soft:#f5ead4;--blue:#345f8b;--blue-soft:#e5edf5;
+    --red:#a1352b;--red-soft:#f5e3e0;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --shadow:0 1px 2px rgba(30,40,30,.05),0 5px 18px rgba(30,40,30,.06);
+  }
+  :root:not([data-theme="light"]){@media (prefers-color-scheme:dark){
+    --paper:#10130e;--surface:#171b13;--surface2:#1f2418;--ink:#e9e8dc;--ink2:#b4b4a6;
+    --faint:#8a8b7d;--line:#2b3023;--accent:#57b488;--accent2:#69c197;--accent-soft:#16271d;
+    --gold:#c6a457;--amber:#d59a45;--amber-soft:#2a2213;--blue:#7aa6d6;--blue-soft:#16202c;
+    --red:#e08379;--red-soft:#2c1714;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.34);
+  }}
+  :root[data-theme="dark"]{
+    --paper:#10130e;--surface:#171b13;--surface2:#1f2418;--ink:#e9e8dc;--ink2:#b4b4a6;
+    --faint:#8a8b7d;--line:#2b3023;--accent:#57b488;--accent2:#69c197;--accent-soft:#16271d;
+    --gold:#c6a457;--amber:#d59a45;--amber-soft:#2a2213;--blue:#7aa6d6;--blue-soft:#16202c;
+    --red:#e08379;--red-soft:#2c1714;--shadow:0 1px 2px rgba(0,0,0,.4),0 8px 24px rgba(0,0,0,.34);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+  header{position:sticky;top:0;z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+    padding:11px 18px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  header h1{font-family:var(--serif);font-size:18px;margin:0}
+  header h1 b{color:var(--accent)}
+  .spacer{flex:1}
+  .banner{background:var(--accent-soft);color:var(--accent2);font-size:12.5px;padding:7px 18px;border-bottom:1px solid var(--line)}
+  main{max-width:1180px;margin:0 auto;padding:16px 18px 70px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:16px}
+  .kpi{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+  .kpi .l{font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--faint)}
+  .kpi .v{font-size:22px;font-weight:680;margin-top:3px;font-variant-numeric:tabular-nums}
+  .kpi .s{font-size:11px;color:var(--faint);margin-top:1px}
+  .tabs{display:flex;gap:4px;margin-bottom:14px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
+  .tabs button{font:inherit;font-size:13.5px;border:0;background:none;color:var(--ink2);padding:9px 14px;cursor:pointer;
+    border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tabs button.on{color:var(--accent2);border-bottom-color:var(--accent);font-weight:650}
+  .card{background:var(--surface);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);margin-bottom:16px;overflow:hidden}
+  .card h2{font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);margin:0;padding:12px 16px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+  .card h2 .c{margin-left:auto;background:var(--surface2);border:1px solid var(--line);border-radius:20px;padding:1px 9px;font-size:12px;color:var(--ink)}
+  .body{padding:6px 16px 12px;max-height:460px;overflow:auto}
+  button.btn{font:inherit;font-size:12.5px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);border-radius:8px;padding:6px 11px;cursor:pointer}
+  button.btn:hover{border-color:var(--faint)}
+  button.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.danger{color:var(--red);border-color:var(--red)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .pill{display:inline-block;font-size:10.5px;padding:1px 8px;border-radius:20px;text-transform:uppercase;letter-spacing:.03em;font-weight:650;white-space:nowrap}
+  .pill.ok{background:var(--accent-soft);color:var(--accent2)}.pill.warn{background:var(--amber-soft);color:var(--amber)}
+  .pill.info{background:var(--blue-soft);color:var(--blue)}.pill.danger{background:var(--red-soft);color:var(--red)}
+  .pill.dim{background:var(--surface2);color:var(--faint)}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);padding:8px 9px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--surface)}
+  td{padding:8px 9px;border-bottom:1px solid var(--line);vertical-align:middle}
+  tr:hover td{background:var(--surface2)}
+  .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+  .toolbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+  select,.inp{background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:6px 9px;color:var(--ink);font:inherit;font-size:12.5px}
+  .btns{display:flex;gap:5px;flex-wrap:wrap}
+  .row{padding:9px 0;border-bottom:1px solid var(--line)}.row:last-child{border-bottom:none}
+  .nm{font-weight:600}.meta{font-size:12px;color:var(--ink2);margin-top:1px}
+  .empty{color:var(--faint);text-align:center;padding:26px 10px;font-size:13.5px}
+  .rung{margin-bottom:8px}.rung .t{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+  .rung .b{height:13px;border-radius:4px;min-width:3px}
+  .fn{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:4px}
+  .fn .n{width:118px;color:var(--faint);flex-shrink:0}.fn .bar{height:13px;border-radius:4px;background:var(--accent);opacity:.85;min-width:2px}
+  .ins{display:flex;gap:8px;font-size:13px;margin:7px 0;line-height:1.5}.ins::before{content:"▸";color:var(--accent)}
+  dialog{border:1px solid var(--line);border-radius:14px;background:var(--surface);color:var(--ink);box-shadow:var(--shadow);max-width:560px;width:94vw;padding:0}
+  dialog::backdrop{background:rgba(0,0,0,.45)}
+  .dh{padding:14px 18px;border-bottom:1px solid var(--line);font-weight:650;font-size:16px}
+  .db{padding:16px 18px;max-height:64vh;overflow:auto}
+  .df{padding:12px 18px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+  label.f{display:block;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--faint);margin:10px 0 3px}
+  .f input,.f textarea{width:100%;background:var(--surface2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;color:var(--ink);font:inherit}
+  .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:9px 16px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:60;max-width:92vw;text-align:center}
+  .toast.show{opacity:1}
+  a{color:var(--accent)}
+  .hide{display:none}
+  /* Household graph */
+  .hh{border:1px solid var(--line);border-radius:11px;background:var(--surface2);padding:12px 14px;margin-bottom:10px}
+  .hh .top{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .hh .top .who{font-weight:650;font-size:15px}
+  .hh .addr{font-size:12px;color:var(--faint);margin-top:2px}
+  .hh .mem{font-size:12.5px;padding:5px 0 5px 10px;border-left:2px solid var(--line);margin-top:7px}
+  .hh .mem b{font-weight:600}
+  .bridge{border-left:3px solid var(--amber)}
+  @media (max-width:620px){#mathcols{grid-template-columns:1fr !important}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1><b>HeirBud</b> Command Center</h1>
+  <span class="pill info">10% cap</span>
+  <span class="pill ok" id="savedTag">saved on this device</span>
+  <div class="spacer"></div>
+  <button class="btn pri" id="importBtn">⬆ Import CSV</button>
+  <button class="btn" id="sampleBtn">Load sample</button>
+  <button class="btn" id="wipeBtn">Clear all</button>
+  <input type="file" id="csvFile" accept=".csv,text/csv" class="hide">
+</header>
+<div class="banner">Everything runs in this browser — your data never leaves this device. Import your Wisconsin CSV to begin. Fees capped at 10% in the math; telling someone about their money is always fine.</div>
+
+<main>
+  <section class="kpis" id="kpis"></section>
+  <div class="tabs" id="tabs">
+    <button data-tab="leads" class="on">Leads</button>
+    <button data-tab="house">Households</button>
+    <button data-tab="today">Today</button>
+    <button data-tab="money">Analytics</button>
+    <button data-tab="collect">Collections</button>
+  </div>
+
+  <div id="tab-leads">
+    <div class="card">
+      <h2>Prospects — ranked achievable-first <span class="c" id="leadCount">0</span></h2>
+      <div class="toolbar">
+        <select id="stageFilter"><option value="">All stages</option></select>
+        <input class="inp" id="search" placeholder="search name / holder…" style="flex:1;min-width:130px">
+        <span class="pill dim" id="rowsInfo">—</span>
+      </div>
+      <div class="body" style="max-height:none;padding:0">
+        <table><thead><tr><th>Name</th><th>Amount</th><th>Priority</th><th>Stage</th><th>Eligibility</th><th>Contact</th><th>Actions</th></tr></thead>
+        <tbody id="prospects"></tbody></table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-house" class="hide">
+    <div class="card">
+      <h2>Same person, more than one claim <span class="c" id="dupCount">0</span></h2>
+      <div class="body" id="samePerson"></div>
+    </div>
+    <div class="card">
+      <h2>Heir bridges — a deceased owner with living family in your own list <span class="c" id="bridgeCount">0</span></h2>
+      <div class="body" id="bridges"></div>
+    </div>
+    <div class="card">
+      <h2>Households — ranked by money per conversation <span class="c" id="hhCount">0</span></h2>
+      <div class="body" id="households"></div>
+    </div>
+  </div>
+
+  <div id="tab-today" class="hide">
+    <div class="card"><h2>Custody verification worklist <span class="c" id="verCount">0</span></h2><div class="body" id="worklist"></div></div>
+    <div class="card"><h2>Today's actions <span class="c" id="actCount">0</span></h2><div class="body" id="actions"></div></div>
+  </div>
+
+  <div id="tab-money" class="hide">
+    <div class="card"><h2>From list to money — the story</h2>
+      <div class="body" style="max-height:none"><div id="narrative"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:14px" id="mathcols">
+          <div><div class="l" style="font-size:11px;text-transform:uppercase;color:var(--faint);margin-bottom:8px">Value ladder</div><div id="ladder"></div></div>
+          <div><div class="l" style="font-size:11px;text-transform:uppercase;color:var(--faint);margin-bottom:8px">Funnel</div><div id="funnel"></div></div>
+        </div></div></div>
+  </div>
+
+  <div id="tab-collect" class="hide">
+    <div class="card"><h2>Collections — the money loop <span class="c" id="colTag">$0</span></h2><div class="body" id="collections"></div></div>
+  </div>
+</main>
+
+<dialog id="modal"><div class="dh" id="mh"></div><div class="db" id="mb"></div><div class="df" id="mf"></div></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+const $=s=>document.querySelector(s), esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt=n=>"$"+Math.round(Number(n)||0).toLocaleString();
+const KEY="heirbud_db_v1";
+let DB={};
+function load(){try{DB=JSON.parse(localStorage.getItem(KEY)||"{}")}catch(e){DB={}} if(!DB.prospects)DB.prospects={};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(DB))}catch(e){toast("Couldn't save — browser storage blocked")}}
+function toast(m,ms=2400){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove("show"),ms);}
+const all=()=>Object.values(DB.prospects);
+const nowISO=()=>new Date().toISOString();
+
+/* ---------- compliance ---------- */
+const FEE=0.10, CUSTODY_MONTHS=24;
+function monthsSince(iso){if(!iso)return null;let d;if(/^\d{4}$/.test(String(iso)))d=new Date(+iso,0,1);else d=new Date(iso);if(isNaN(d))return null;const n=new Date();return (n.getFullYear()-d.getFullYear())*12+(n.getMonth()-d.getMonth());}
+function eligible(p){if(!p.custody_date)return{ok:false,why:"No verified custody date"};const m=monthsSince(p.custody_date);if(m===null)return{ok:false,why:"Bad custody date"};if(m<CUSTODY_MONTHS)return{ok:false,why:`In custody ${m}mo (<24) — agreement would be void`};return{ok:true,why:`Eligible: ${m}mo in custody`};}
+function feeAmt(a){return Math.round((Number(a)||0)*FEE*100)/100;}
+
+/* ---------- scoring ---------- */
+const COMPLEX=["ESTATE","TRUST","BUSINESS"];
+function segment(name){const n=String(name||"").toUpperCase();
+  if(/\bESTATE\b|\bDECEASED\b|EST OF|ESTATE OF/.test(n))return"ESTATE";
+  if(/\bTRUST\b|\bTRUSTEE\b|LIV(ING)? TR|REVOC/.test(n))return"TRUST";
+  if(ORG.test(n))return"BUSINESS";
+  return"OWNER";}
+/* Wisconsin's list is not all people — banks, hospitals, counties and the State
+   itself are listed as owners. They're real records but a different job (no heir
+   to find, no household), so they must be recognized, never grouped as family.
+   Kept in step with _ORG_NAME in scoring.py. */
+const ORG=/\bLLC\b|\bL\.?L\.?C\b|\bINC\b|\bCORP\b|\bCOMPANY\b|\bCO\.?\b|DISSOLVED|\bLP\b|\bLLP\b|\bLTD\b|\bBANK\b|CREDIT UNION|\bN\.?A\.?$|\bFSB\b|SAVINGS BANK|\bINSURANCE\b|\bASSURANCE\b|HOSPITAL|CLINIC|MEDICAL CENTER|\bHEALTH\b|UNIVERSITY|COLLEGE|SCHOOL DIST|\bSCHOOL\b|\bCHURCH\b|\bPARISH\b|\bSYNAGOGUE\b|\bMOSQUE\b|\bDIOCESE\b|\bCOUNTY\b|STATE OF|CITY OF|VILLAGE OF|TOWN OF|\bTOWNSHIP\b|DEPARTMENT OF|\bDEPT\b|\bASSOCIATION\b|\bASSOC\b|\bFOUNDATION\b|\bSOCIETY\b|\bINSTITUTE\b|\bPARTNERS\b|\bHOLDINGS\b|\bENTERPRISES\b|\bINDUSTRIES\b|\bSERVICES\b|\bSOLUTIONS\b|\bGROUP\b|\bPROPERTIES\b|\bREALTY\b|\bMOTORS\b|\bPHARMACY\b|\bRESTAURANT\b|\bUNION\b|\bLOCAL \d+\b/;
+const HIGH_BARRIER=/SECURIT|STOCK|DIVIDEND|MUTUAL|BROKERAGE|INSURANCE|ANNUIT|LIFE|BENEFICIAR|LIQU|POLICY/;
+function barrier(p,seg){let b=0;if(seg==="ESTATE")b+=.55;else if(seg==="TRUST")b+=.45;else if(seg==="BUSINESS")b+=.5;
+  const a=+p.amount||0;if(a>=100000)b+=.25;else if(a>=50000)b+=.12;if(HIGH_BARRIER.test(String(p.property_type||"").toUpperCase()))b+=.15;return Math.min(1,b);}
+function valuePriority(a){a=+a||0;if(a<=0)return 0;const lo=Math.log10(Math.max(a,1)),hi=Math.log10(60000);let base=(lo-Math.log10(800))/(hi-Math.log10(800));base=Math.max(0,Math.min(1,base));if(a>60000){const over=(Math.log10(a)-hi)/(Math.log10(2e6)-hi);base=1-Math.min(.5,Math.max(0,over)*.5);}return base;}
+const COMMON=["SMITH","JOHNSON","WILLIAMS","BROWN","JONES","MILLER","DAVIS","WILSON","ANDERSON","THOMAS","TAYLOR","MOORE","JACKSON","MARTIN","LEE","THOMPSON","WHITE","HARRIS","NELSON","GARCIA"];
+const NICK={ROBERT:["Bob","Rob"],WILLIAM:["Bill","Will"],JAMES:["Jim","Jimmy"],MICHAEL:["Mike"],RICHARD:["Rick","Dick"],JOSEPH:["Joe"],THOMAS:["Tom"],CHARLES:["Chuck","Charlie"],DAVID:["Dave"],STEVEN:["Steve"],STEPHEN:["Steve"],ANTHONY:["Tony"],DANIEL:["Dan"],MATTHEW:["Matt"],CHRISTOPHER:["Chris"],NICHOLAS:["Nick"],SAMUEL:["Sam"],BENJAMIN:["Ben"],EDWARD:["Ed"],MARGARET:["Peg","Peggy"],ELIZABETH:["Liz","Beth","Betty"],KATHERINE:["Kate","Kathy"],SUSAN:["Sue"],JENNIFER:["Jen"],PATRICIA:["Pat"],DEBORAH:["Debbie"],REBECCA:["Becky"],RONALD:["Ron"],KENNETH:["Ken"]};
+/* nickname → formal, so "Bob Kiyak" and "Robert Kiyak" land in one household */
+const FORMAL={};for(const f in NICK)for(const n of NICK[f])FORMAL[n.toUpperCase()]=f;
+function findabilityOf(p){const first=(p.first||"").toUpperCase(),last=(p.last||(p.name||"").split(" ").slice(-1)[0]||"").toUpperCase();
+  if(!last)return[15,"Very hard"];let s=58;if(COMMON.includes(last))s-=16;else s+=8;if(p.city)s+=13;if(segment(p.name)==="ESTATE")s-=14;
+  s=Math.max(8,Math.min(96,s));return[s,s>=75?"Easy":s>=50?"Moderate":s>=30?"Hard":"Very hard"];}
+function closeProb(p,seg){let base=COMPLEX.includes(seg)?.38:.6;base*=(1-.5*barrier(p,seg));if(p.eligibility_reviewed)return base;if(p.custody_date)return base*.08;return base*.5;}
+function recommendedMode(p){const seg=segment(p.name);if(COMPLEX.includes(seg))return"CONTRACT";return (+p.amount||0)<2000?"GRATUITY":"CONTRACT";}
+function track(p,seg){if(p.suppression_status==="SUPPRESSED")return"SUPPRESSED";if(!p.eligibility_reviewed)return"VERIFY FIRST";if(COMPLEX.includes(seg))return"PREMIUM";if((+p.amount||0)<500)return"SELF-SERVE";return"FAST TRACK";}
+function score(p){const seg=segment(p.name),a=+p.amount||0;const v=valuePriority(a),e=p.suppression_status==="SUPPRESSED"?0:p.eligibility_reviewed?1:p.custody_date?.35:.55;
+  const find=findabilityOf(p)[0];let c=(p.phone||p.email)?(p.phone&&p.email?1:.75):(.1+.75*find/100);
+  const prob=closeProb(p,seg),fit=prob/.6;let sc=100*(.42*v+.3*e+.18*c+.1*fit);
+  /* Leverage: one conversation that unlocks several claims is worth more than
+     one that unlocks a single row. This is the whole reason for Households. */
+  const lev=leverageOf(p.property_id);
+  if(lev.claims>1)sc*=1+Math.min(.35,.12*(lev.claims-1));
+  if(p.suppression_status==="SUPPRESSED")sc=0;
+  return{score:Math.round(sc*10)/10,segment:seg,expected_fee:Math.round(a*FEE*prob),findability:find,
+    mode:(p.fee_model||recommendedMode(p)),track:track(p,seg),leverage:lev};}
+
+/* ---------- HOUSEHOLD GRAPH ------------------------------------------------
+   Every locator in this business works the same public list. The edge isn't the
+   list — it's how much money one conversation is worth. Wisconsin's file is full
+   of the same person listed several times, and of families sharing one address
+   where one member is deceased and the living ones are the heirs. Grouping the
+   list turns "5 letters, 5 strangers" into "1 phone call, 5 claims" — better
+   economics for us and far less nagging for them.
+   Privacy rule enforced below: a combined letter is only ever generated for one
+   person's own claims. A relative is shown to the OPERATOR as a research lead;
+   we never disclose one person's money to another person.
+-------------------------------------------------------------------------- */
+const NOISE=/\b(APT|UNIT|STE|SUITE|#|FL|FLOOR|RM|ROOM|PO BOX|BOX)\b.*$/;
+function normTxt(s){return String(s||"").toUpperCase().replace(/[.,'"()]/g,"").replace(/\s+/g," ").trim();}
+function normFirst(p){let f=normTxt(p.first||(p.name||"").split(" ")[0]).split(" ")[0];return FORMAL[f]||f;}
+function normLast(p){
+  /* strip estate/trust wrappers so "ESTATE OF DAVID KRAUSE" keys to KRAUSE */
+  let n=normTxt(p.name).replace(/\b(THE )?(ESTATE|EST) OF\b|\bESTATE\b|\bDECEASED\b|\bDECD\b|\bTRUST(EE)?\b|\bREVOCABLE\b|\bLIVING\b/g," ").replace(/\s+/g," ").trim();
+  let l=normTxt(p.last);
+  if(!l||!n.includes(l))l=n.split(" ").slice(-1)[0]||"";
+  return l;}
+function addrKey(p){
+  const street=normTxt(String(p.last_known_address||"").split(",")[0]).replace(NOISE,"").trim();
+  const zip=(String(p.zip||"").match(/\d{5}/)||[""])[0];
+  const city=normTxt(p.city);
+  if(street&&street.length>4)return "A:"+street+"|"+(zip||city);
+  if(city)return "C:"+city+"|"+(zip||"");
+  return "";}
+/* A household is a surname sharing a place — the unit a single conversation covers. */
+function householdKey(p){const l=normLast(p),a=addrKey(p);return (l&&a)?l+"@"+a:"";}
+function personKey(p){const l=normLast(p),f=normFirst(p),a=addrKey(p);return (l&&f)?l+"/"+f+"@"+(a||"?"):"";}
+function isDeceased(p){return segment(p.name)==="ESTATE"||/\bDECEASED\b|\bDECD\b|\bESTATE\b/.test(normTxt(p.name))
+  ||/BENEFICIAR/.test(String(p.property_type||"").toUpperCase());}
+
+/* The nickname table can never be complete — real files carry Bart/Bartholomew,
+   Kathy/Kathleen and bare initials. Surname AND address already match by the time
+   we get here, so inside one household a prefix or an initial counts as the same
+   person: a missed merge means mailing someone twice, which is the worse error.
+   Mirrors _same_human() in household.py. */
+function sameHuman(a,b){if(a===b)return true;
+  if(FORMAL[a]===b||FORMAL[b]===a)return true;
+  if(a.length===1||b.length===1)return a[0]===b[0];
+  const[s,l]=a.length<=b.length?[a,b]:[b,a];
+  return s.length>=3&&l.startsWith(s);}
+let GRAPH={persons:new Map(),houses:new Map(),byPid:new Map(),owner:new Map()};
+function buildGraph(){
+  let persons=new Map();const houses=new Map(),byPid=new Map(),owner=new Map();
+  for(const p of all()){
+    if(segment(p.name)==="BUSINESS")continue;              // a company is not a household
+    const pk=personKey(p);if(pk){if(!persons.has(pk))persons.set(pk,[]);persons.get(pk).push(p);}
+    const hk=householdKey(p);if(hk){if(!houses.has(hk))houses.set(hk,[]);houses.get(hk).push(p);}
+  }
+  /* fold buckets that are one human under two spellings — longest first name wins,
+     so the result is the same no matter what order the rows arrived in */
+  const byPlace=new Map();
+  for(const k of persons.keys()){const at=k.indexOf("@"),place=k.slice(at+1),np=k.slice(0,at);
+    const sl=np.indexOf("/"),last=np.slice(0,sl),first=np.slice(sl+1);
+    const g=last+"@"+place;if(!byPlace.has(g))byPlace.set(g,[]);byPlace.get(g).push([first,k]);}
+  const merged=new Map();
+  for(const group of byPlace.values()){
+    group.sort((x,y)=>y[0].length-x[0].length||x[0].localeCompare(y[0]));
+    const claimed=[];
+    for(const[first,k]of group){const host=claimed.find(c=>sameHuman(c[0],first));
+      if(!host){claimed.push([first,k]);merged.set(k,(merged.get(k)||[]).concat(persons.get(k)));}
+      else merged.set(host[1],merged.get(host[1]).concat(persons.get(k)));}}
+  persons=merged;
+  for(const[k,ms]of persons)for(const m of ms)owner.set(m.property_id,k);
+  for(const p of all()){
+    const pk=owner.get(p.property_id)||personKey(p),hk=householdKey(p);
+    const mine=(persons.get(pk)||[p]);
+    byPid.set(p.property_id,{
+      claims:mine.length, own_total:mine.reduce((a,x)=>a+(+x.amount||0),0),
+      siblings:mine.filter(x=>x.property_id!==p.property_id).map(x=>x.property_id),
+      household:hk, household_size:(houses.get(hk)||[p]).length,
+      household_total:(houses.get(hk)||[p]).reduce((a,x)=>a+(+x.amount||0),0)});
+  }
+  GRAPH={persons,houses,byPid,owner};
+}
+const bucketFor=p=>GRAPH.owner.get(p.property_id)||personKey(p);
+function leverageOf(pid){return GRAPH.byPid.get(pid)||{claims:1,own_total:0,siblings:[],household:"",household_size:1,household_total:0};}
+/* Same person, several claims — one letter covers all of them. */
+function samePersonClusters(){const out=[];
+  for(const [k,ms] of GRAPH.persons){if(ms.length<2)continue;
+    const active=ms.filter(m=>m.suppression_status!=="SUPPRESSED");if(active.length<2)continue;
+    out.push({key:k,name:active[0].name,members:active.slice().sort((a,b)=>(+b.amount||0)-(+a.amount||0)),
+      total:active.reduce((a,m)=>a+(+m.amount||0),0),
+      address:active.find(m=>m.last_known_address)?.last_known_address||active[0].city||""});}
+  return out.sort((a,b)=>b.total-a.total);}
+/* A deceased owner + living same-surname people at the same address = the heir
+   you need to find is already sitting in your own list. That is heir-finding. */
+function heirBridges(){const out=[];
+  for(const [hk,ms] of GRAPH.houses){
+    const dead=ms.filter(isDeceased),living=ms.filter(m=>!isDeceased(m)&&m.suppression_status!=="SUPPRESSED");
+    if(!dead.length||!living.length)continue;
+    for(const d of dead){if(d.suppression_status==="SUPPRESSED")continue;
+      out.push({estate:d,candidates:living.slice().sort((a,b)=>((b.phone||b.email)?1:0)-((a.phone||a.email)?1:0)),
+        household:hk,unlock:feeAmt(d.amount)});}}
+  return out.sort((a,b)=>b.unlock-a.unlock);}
+function householdList(){const out=[];
+  for(const [hk,ms] of GRAPH.houses){
+    if(ms.length<2)continue;
+    const active=ms.filter(m=>m.suppression_status!=="SUPPRESSED");if(!active.length)continue;
+    const people=new Map();
+    for(const m of active){const pk=bucketFor(m);if(!people.has(pk))people.set(pk,[]);people.get(pk).push(m);}
+    out.push({key:hk,label:(active[0].last||normLast(active[0])||"").replace(/\b\w/g,c=>c.toUpperCase())+" household",
+      address:active.find(m=>m.last_known_address)?.last_known_address||active[0].city||"—",
+      people:[...people.values()],claims:active.length,
+      total:active.reduce((a,m)=>a+(+m.amount||0),0),
+      fee:active.reduce((a,m)=>a+feeAmt(m.amount),0),
+      deceased:active.some(isDeceased),
+      reachable:active.some(m=>m.phone||m.email)});}
+  return out.sort((a,b)=>b.total-a.total);}
+
+/* ---------- CSV ---------- */
+function parseCSV(text){const rows=[];let row=[],cur="",q=false;text=text.replace(/\r\n/g,"\n").replace(/\r/g,"\n");
+  for(let i=0;i<text.length;i++){const ch=text[i];if(q){if(ch==='"'){if(text[i+1]==='"'){cur+='"';i++;}else q=false;}else cur+=ch;}
+    else{if(ch==='"')q=true;else if(ch===","){row.push(cur);cur="";}else if(ch==="\n"){row.push(cur);rows.push(row);row=[];cur="";}else cur+=ch;}}
+  if(cur.length||row.length){row.push(cur);rows.push(row);}return rows.filter(r=>r.some(c=>c.trim()!==""));}
+const ALIAS={property_id:["property id","propertyid","prop id","id"],last:["lastname","last name","last"],first:["firstname","first name","first"],mi:["mi","middle","middle initial"],name:["name","owner name","owner"],amount:["amount","reported value","value","cash amount"],property_type:["property type","propertytype","type"],holder:["holder","holder name","reported by","holder_clean"],address:["address 1","address1","address","street","last known address"],city:["city"],state:["state","st"],zip:["zip","zipcode","zip code"],year:["year","report year","reported"]};
+function colIndex(headers){const H=headers.map(h=>h.toLowerCase().trim());const idx={};for(const k in ALIAS){idx[k]=-1;for(const a of ALIAS[k]){const i=H.indexOf(a);if(i>=0){idx[k]=i;break;}}}return idx;}
+function importCSV(text){const rows=parseCSV(text);if(rows.length<2){toast("Empty or unreadable CSV");return;}
+  const idx=colIndex(rows[0]);let added=0,dupe=0,skip=0;const get=(r,k)=>idx[k]>=0?(r[idx[k]]||"").trim():"";
+  for(let i=1;i<rows.length;i++){const r=rows[i];let first=get(r,"first"),last=get(r,"last"),name=get(r,"name");
+    if(!name)name=[first,get(r,"mi"),last].filter(Boolean).join(" ").trim();
+    if(!name){skip++;continue;}
+    let amount=parseFloat((get(r,"amount")||"0").replace(/[$,]/g,""))||0;
+    const city=get(r,"city"),zip=get(r,"zip");
+    const addr=[get(r,"address"),city,get(r,"state")||"WI",zip].filter(Boolean).join(", ");
+    let pid=get(r,"property_id");if(!pid)pid="GEN-"+Math.abs(hashStr(name+addr+amount)).toString(36).toUpperCase();
+    if(DB.prospects[pid]){dupe++;continue;}
+    DB.prospects[pid]={property_id:pid,name,first:first||name.split(" ")[0],last:last||name.split(" ").slice(-1)[0],
+      city,zip,last_known_address:addr,amount,property_type:get(r,"property_type"),holder:get(r,"holder"),
+      report_year:get(r,"year"),stage:"IDENTIFIED",suppression_status:"ACTIVE",created_at:nowISO()};added++;}
+  save();render();toast(`Imported ${added} new · ${dupe} already there · ${skip} skipped`,4200);}
+function hashStr(s){let h=0;for(let i=0;i<s.length;i++){h=(h<<5)-h+s.charCodeAt(i);h|=0;}return h;}
+
+/* ---------- render ---------- */
+let TAB="leads";
+function render(){buildGraph();renderKpis();renderLeads();renderHouse();renderToday();renderMoney();renderCollect();renderStageFilter();}
+function renderKpis(){const ps=all();const active=ps.filter(p=>p.suppression_status!=="SUPPRESSED");
+  const pub=ps.reduce((a,p)=>a+(+p.amount||0),0);const elig=ps.filter(p=>p.eligibility_reviewed);
+  const eligVal=elig.reduce((a,p)=>a+(+p.amount||0),0);const collected=ps.filter(p=>p.fee_paid).reduce((a,p)=>a+feeAmt(p.amount),0);
+  const clusters=samePersonClusters(),bridges=heirBridges();
+  const multi=clusters.reduce((a,c)=>a+c.members.length,0);
+  const tiles=[["Active leads",active.length,(ps.length-active.length)+" suppressed"],["Published value",fmt(pub),"not revenue"],
+    ["Eligible value",fmt(eligVal),elig.length+" verified · fee ≤ "+fmt(eligVal*FEE)],
+    ["Fees collected",fmt(collected),"realized"],
+    ["Multi-claim people",clusters.length,multi+" claims in "+clusters.length+(clusters.length===1?" conversation":" conversations")],
+    ["Heir bridges",bridges.length,"estates with family on your list"]];
+  $("#kpis").innerHTML=tiles.map(t=>`<div class="kpi"><div class="l">${t[0]}</div><div class="v">${t[1]}</div><div class="s">${t[2]}</div></div>`).join("");
+  $("#savedTag").textContent=ps.length?`${ps.length} saved on this device`:"nothing saved yet";}
+const STAGES=["IDENTIFIED","ENRICHED","CONTACTED","RESPONDED","AGREEMENT_SENT","SIGNED","FILED","PAID","CLOSED","SUPPRESSED"];
+function eligPill(p){if(p.suppression_status==="SUPPRESSED")return'<span class="pill danger">suppressed</span>';
+  if(p.eligibility_reviewed)return'<span class="pill ok">eligible ✓</span>';
+  if(p.custody_checked||p.custody_date)return`<span class="pill danger" title="${esc(p.eligibility_reason||'')}">ineligible</span>`;
+  return'<span class="pill warn">unverified</span>';}
+const TRACKCLS={"FAST TRACK":"ok","SELF-SERVE":"dim","VERIFY FIRST":"warn","SUPPRESSED":"danger","PREMIUM":"info"};
+function renderLeads(){const q=($("#search").value||"").toLowerCase(),sf=$("#stageFilter").value;
+  let rows=all().map(p=>({p,s:score(p)})).filter(x=>(!sf||x.p.stage===sf)&&(!q||(x.p.name||"").toLowerCase().includes(q)||(x.p.holder||"").toLowerCase().includes(q)));
+  rows.sort((a,b)=>b.s.score-a.s.score||b.s.expected_fee-a.s.expected_fee);
+  $("#leadCount").textContent=all().length;$("#rowsInfo").textContent=rows.length+" shown · achievable first";
+  $("#prospects").innerHTML=rows.length?rows.map(({p,s})=>{const supp=p.suppression_status==="SUPPRESSED";
+    const lev=s.leverage;
+    return `<tr>
+      <td><b>${esc(p.name)}</b>${lev.claims>1?` <span class="pill info" title="${lev.claims} claims for this person — ${fmt(lev.own_total)} total">×${lev.claims} · ${fmt(lev.own_total)}</span>`:""}
+        <div class="meta" style="font-size:11px">${esc(p.holder||"")} · ${s.segment}</div></td>
+      <td class="amt">${fmt(p.amount)}</td>
+      <td><div class="amt">${s.score.toFixed(0)} <span style="font-weight:400;color:var(--faint);font-size:11px">· ${fmt(s.expected_fee)}</span></div><span class="pill ${TRACKCLS[s.track]||'dim'}">${s.track}</span></td>
+      <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span></td>
+      <td>${eligPill(p)}</td>
+      <td>${p.phone||p.email?esc(p.phone||p.email):`<span class="pill ${s.findability>=70?'ok':s.findability>=45?'warn':'danger'}">findable ${s.findability}</span>`}</td>
+      <td><div class="btns">
+        <button class="btn" onclick="findDlg('${p.property_id}')" ${supp?'disabled':''}>🔎 Find</button>
+        <button class="btn" onclick="verifyDlg('${p.property_id}')" ${supp?'disabled':''}>Verify</button>
+        <button class="btn" onclick="toggleMode('${p.property_id}')" ${supp?'disabled':''}>${s.mode==='GRATUITY'?'🤝':'📄'}</button>
+        <button class="btn" onclick="letterDlg('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
+        <button class="btn" onclick="stageDlg('${p.property_id}')" ${supp?'disabled':''}>Stage</button>
+        ${['SIGNED','FILED','PAID','CLOSED'].includes(p.stage)&&!p.fee_paid?`<button class="btn pri" onclick="collectDlg('${p.property_id}')">💵</button>`:''}
+        <button class="btn danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Stop</button>
+      </div></td></tr>`;}).join(""):'<tr><td colspan="7" class="empty">No leads yet. Click “⬆ Import CSV” up top (or “Load sample” to see it work).</td></tr>';}
+function renderStageFilter(){const sel=$("#stageFilter"),cur=sel.value;const counts={};all().forEach(p=>counts[p.stage]=(counts[p.stage]||0)+1);
+  sel.innerHTML='<option value="">All stages</option>'+STAGES.filter(s=>counts[s]).map(s=>`<option value="${s}">${s} (${counts[s]})</option>`).join("");sel.value=cur;}
+
+/* ---------- households tab ---------- */
+function renderHouse(){
+  const cl=samePersonClusters();
+  $("#dupCount").textContent=cl.length;
+  $("#samePerson").innerHTML=cl.length?cl.map(c=>`<div class="hh">
+      <div class="top"><span class="who">${esc(c.name)}</span>
+        <span class="pill info">${c.members.length} claims</span>
+        <span class="amt" style="margin-left:auto">${fmt(c.total)}</span></div>
+      <div class="addr">${esc(c.address)} · one letter covers all of it · fee ≤ ${fmt(feeAmt(c.total))}</div>
+      ${c.members.map(m=>`<div class="mem"><b>${fmt(m.amount)}</b> — ${esc(m.property_type||"property")} · ${esc(m.holder||"")} <span class="pill dim">${m.property_id}</span></div>`).join("")}
+      <div class="btns" style="margin-top:9px">
+        <button class="btn pri" onclick="combinedLetter('${encodeURIComponent(c.key)}')">Combined letter</button>
+        <button class="btn" onclick="findDlg('${c.members[0].property_id}')">🔎 Find them</button></div>
+    </div>`).join(""):'<div class="empty">No one in your list appears twice yet. Import more of the file — Wisconsin repeats people often.</div>';
+
+  const br=heirBridges();
+  $("#bridgeCount").textContent=br.length;
+  $("#bridges").innerHTML=br.length?br.map(b=>`<div class="hh bridge">
+      <div class="top"><span class="who">${esc(b.estate.name)}</span><span class="pill danger">deceased owner</span>
+        <span class="amt" style="margin-left:auto">${fmt(b.estate.amount)}</span></div>
+      <div class="addr">${esc(b.estate.last_known_address||b.estate.city||"")} · unlocks ≤ ${fmt(b.unlock)} fee</div>
+      <div class="meta" style="margin-top:6px">Living relative${b.candidates.length>1?"s":""} at the same address, already in your list — likely heir${b.candidates.length>1?"s":""}:</div>
+      ${b.candidates.map(c=>`<div class="mem"><b>${esc(c.name)}</b> · ${c.phone||c.email?'<span class="pill ok">'+esc(c.phone||c.email)+'</span>':'<span class="pill warn">no contact yet</span>'}
+        <button class="btn" style="margin-left:6px" onclick="findDlg('${c.property_id}')">🔎 Find</button></div>`).join("")}
+      <div class="btns" style="margin-top:9px"><button class="btn" onclick="heirScript('${encodeURIComponent(b.estate.property_id)}')">Heir approach script</button></div>
+    </div>`).join(""):'<div class="empty">No estate in your list has a living relative at the same address — yet. This is where the real heir-finding money hides, so it fills up as you import more.</div>';
+
+  const hh=householdList();
+  $("#hhCount").textContent=hh.length;
+  $("#households").innerHTML=hh.length?hh.slice(0,60).map(h=>`<div class="hh">
+      <div class="top"><span class="who">${esc(h.label)}</span>
+        ${h.deceased?'<span class="pill danger">has estate</span>':''}
+        ${h.reachable?'<span class="pill ok">contact known</span>':''}
+        <span class="amt" style="margin-left:auto">${fmt(h.total)}</span></div>
+      <div class="addr">${esc(h.address)} · ${h.people.length} ${h.people.length===1?"person":"people"} · ${h.claims} claims · fee ≤ ${fmt(h.fee)}</div>
+      ${h.people.map(ps=>`<div class="mem"><b>${esc(ps[0].name)}</b> ${ps.length>1?`<span class="pill info">×${ps.length}</span>`:""} — ${fmt(ps.reduce((a,x)=>a+(+x.amount||0),0))}</div>`).join("")}
+    </div>`).join(""):'<div class="empty">No shared-address families found yet.</div>';
+}
+window.combinedLetter=key=>{key=decodeURIComponent(key);const ms=(GRAPH.persons.get(key)||[]).filter(m=>m.suppression_status!=="SUPPRESSED");
+  if(!ms.length)return;const p=ms[0],first=nameParts(p).first;const total=ms.reduce((a,m)=>a+(+m.amount||0),0);
+  /* Every claim in this letter belongs to this one person, so listing them all
+     discloses nothing to anyone else. Mode follows the largest claim. */
+  const anchor=ms.slice().sort((a,b)=>(+b.amount||0)-(+a.amount||0))[0];
+  const mode=anchor.fee_model||recommendedMode(anchor);
+  const allEligible=ms.every(m=>m.eligibility_reviewed);
+  const useMode=(mode==="CONTRACT"&&!allEligible)?"GRATUITY":mode;
+  const list=ms.map(m=>`<li><b>${fmt(m.amount)}</b> — ${esc(m.property_type||"property")}${m.holder?", reported by "+esc(m.holder):""}</li>`).join("");
+  const feeLine=useMode==="CONTRACT"
+    ?`<p>If you'd rather I handle the paperwork on all of them, I do that on contingency: a 10% fee (Wisconsin's maximum), agreed in writing first, owed only if you actually get paid. No upfront cost, cancel anytime.</p>`
+    :`<p>I'm glad to walk you through the paperwork at no cost. If it works out and you'd like to send a thank-you of your choosing, that's kind — but never expected.</p>`;
+  const html=`<h1>ZGroup LLC <span class="muted">· Wisconsin unclaimed-property assistance</span></h1>
+    <p class="muted">${esc(p.name)}<br>${esc(p.last_known_address||"")}</p>
+    <p>Dear ${esc(first)},</p>
+    <p>While researching Wisconsin unclaimed-property records I found <b>${ms.length} separate items</b> that appear to belong to you — about <b>${fmt(total)}</b> in total:</p>
+    <ul>${list}</ul>
+    <p>The honest part first: this is your money, and you can claim all of it yourself for free at revenue.wi.gov. You don't need me, and I'm not the government.</p>
+    ${feeLine}
+    <p>Most people never find out about even one of these, let alone ${ms.length}. Either way, I hope you get what's yours.</p>
+    <p>Warmly,<br>[Your Name] · ZGroup LLC · [phone] · [email]</p>
+    <div class="foot">${DISCLOSURE}</div>`;
+  modal(`Combined letter — ${ms.length} claims, ${fmt(total)}`,
+    `<p class="meta">${useMode==="CONTRACT"?"Contract mode — all claims verified eligible.":"Gratuity mode — no fee agreement (safe even before custody is verified)."} Every item listed belongs to this same person, so nothing private is disclosed.</p>
+     <div style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
+    [["Close","",closeModal],["Open printable letter","pri",()=>{openPrintable("Letter — "+p.name,html);
+      ms.forEach(m=>{if(["IDENTIFIED","ENRICHED"].includes(m.stage))setStage(m.property_id,"CONTACTED","combined letter");});closeModal();}]]);};
+window.heirScript=pid=>{pid=decodeURIComponent(pid);const b=heirBridges().find(x=>x.estate.property_id===pid);if(!b)return;
+  const d=b.estate,cand=b.candidates[0],last=(d.last||normLast(d)||"").replace(/\b\w/g,c=>c.toUpperCase());
+  const html=`<h1>Heir approach — ${esc(d.name)}</h1>
+    <p class="muted">Property ${esc(d.property_id)} · ${fmt(d.amount)} · ${esc(d.property_type||"")} · held by ${esc(d.holder||"—")}</p>
+    <p><b>What you know:</b> Wisconsin is holding ${fmt(d.amount)} under a deceased owner's name at ${esc(d.last_known_address||d.city||"this address")}. ${b.candidates.length} living ${b.candidates.length>1?"people":"person"} with the same surname ${b.candidates.length>1?"are":"is"} listed at the same address — likely immediate family, and likely the rightful heir${b.candidates.length>1?"s":""}.</p>
+    <p><b>Who to call first:</b> ${esc(cand.name)}${cand.phone||cand.email?" — "+esc(cand.phone||cand.email):" (find their number first)"}</p>
+    <h2 style="font-size:15px">What to say</h2>
+    <p>"Hi, is this ${esc(nameParts(cand).first)}? My name is [Your Name] — I'm not selling anything and this isn't a bill. I research Wisconsin's unclaimed-property records, and the state is holding money listed under ${esc(last)} at your address. If that's a relative of yours who has passed, the money doesn't disappear — it goes to the family, and most people never know it's there.</p>
+    <p>You can claim it yourself for free at revenue.wi.gov, and I'll happily point you straight to it. If the paperwork looks like a hassle — and for an estate it usually does — I do this for people on contingency: 10%, which is Wisconsin's legal maximum, in writing first, and only if you actually get paid. Nothing upfront, ever. Want me to send you what I found so you can look it over?"</p>
+    <h2 style="font-size:15px">Ground rules</h2>
+    <ul><li>Never say or imply you're from the State of Wisconsin.</li>
+      <li>Never ask for a Social Security number, bank details, or any upfront payment.</li>
+      <li>Say the free option out loud, first, every time.</li>
+      <li>An estate claim usually needs the personal representative or the heirs — expect to ask "who's handling their estate?"</li>
+      <li>If they ask you to stop, stop, and hit <b>Stop</b> on their row so they're never contacted again.</li></ul>
+    <div class="foot">${DISCLOSURE}</div>`;
+  modal("Heir approach script — "+d.name,
+    `<div style="max-height:340px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
+    [["Close","",closeModal],["Open printable script","pri",()=>{openPrintable("Heir script — "+d.name,html);closeModal();}]]);};
+
+function furthest(p){const i=STAGES.indexOf(p.stage);const hist=(p.history||[]).map(h=>STAGES.indexOf(h)).filter(x=>x>=0&&x<9);const cur=(i>=0&&i<9)?i:-1;return Math.max(cur,...hist,-1);}
+function renderToday(){const w=all().filter(p=>p.suppression_status!=="SUPPRESSED"&&!(p.eligibility_reviewed&&p.custody_date)).sort((a,b)=>(+b.amount||0)-(+a.amount||0));
+  $("#verCount").textContent=w.length;
+  $("#worklist").innerHTML=w.length?w.slice(0,40).map(p=>`<div class="row"><div class="nm">${esc(p.name)} <span class="amt">${fmt(p.amount)}</span></div>
+    <div class="meta">${p.eligibility_reason?esc(p.eligibility_reason):"not yet checked"} · unlocks ≤ ${fmt(feeAmt(p.amount))} fee</div>
+    <div class="btns" style="margin-top:5px"><button class="btn" onclick="verifyDlg('${p.property_id}')">Verify custody…</button></div></div>`).join(""):'<div class="empty">✅ All active records verified.</div>';
+  const acts=all().filter(p=>p.suppression_status!=="SUPPRESSED"&&["ENRICHED","RESPONDED","AGREEMENT_SENT","SIGNED"].includes(p.stage));
+  $("#actCount").textContent=acts.length;
+  $("#actions").innerHTML=acts.length?acts.map(p=>`<div class="row"><div class="nm">${esc(p.name)} <span class="amt">${fmt(p.amount)}</span></div><div class="meta">${p.stage} · ${p.phone||p.email||"⚠ find contact"}</div></div>`).join(""):'<div class="empty">Nothing waiting. Verify + enrich leads to fill this.</div>';}
+
+function renderMoney(){const ps=all();const pub=ps.reduce((a,p)=>a+(+p.amount||0),0);const eligV=ps.filter(p=>p.eligibility_reviewed).reduce((a,p)=>a+(+p.amount||0),0);
+  const expFee=Math.round(eligV*FEE),realized=ps.filter(p=>p.fee_paid).reduce((a,p)=>a+feeAmt(p.amount),0);
+  const verified=ps.filter(p=>p.eligibility_reviewed).length,supp=ps.filter(p=>p.suppression_status==="SUPPRESSED").length;
+  const nar=[];nar.push(`${verified} of ${ps.length} records are verified eligible (${ps.length?Math.round(verified/ps.length*100):0}%). The rest can't get an agreement until custody is confirmed.`);
+  nar.push(`${fmt(pub)} of published property narrows to ${fmt(eligV)} eligible. At 10% that's ${fmt(expFee)} reachable — ${realized?fmt(realized)+" collected so far.":"none collected yet."}`);
+  const cl=samePersonClusters(),br=heirBridges();
+  const s=(n,one,many)=>n===1?one:many;
+  if(cl.length){const claims=cl.reduce((a,c)=>a+c.members.length,0),val=cl.reduce((a,c)=>a+c.total,0);
+    nar.push(`${claims} of your claims belong to just ${cl.length} ${s(cl.length,"person","people")} — ${fmt(val)} reachable in ${cl.length} ${s(cl.length,"conversation","conversations")} instead of ${claims}. Work those first; the effort per dollar is the lowest on your whole list.`);}
+  if(br.length){const unlock=br.reduce((a,b)=>a+b.unlock,0);
+    nar.push(`${br.length} deceased-owner ${s(br.length,"record has","records have")} living family already in your list at the same address — up to ${fmt(unlock)} in fees where you already know who to talk to. Most locators skip these because they look hard.`);}
+  if(supp)nar.push(`${Math.round(supp/ps.length*100)}% opted out and are suppressed — honored, never contacted again.`);
+  $("#narrative").innerHTML=ps.length?nar.map(n=>`<div class="ins">${esc(n)}</div>`).join(""):'<div class="empty">Import leads to see your funnel story.</div>';
+  const max=Math.max(1,pub);const rungs=[["Published",pub,"var(--blue)","not revenue"],["Eligible",eligV,"var(--accent)",""],["Expected fee",expFee,"var(--amber)","if all recover"],["Collected",realized,"var(--ink)","actually paid"]];
+  $("#ladder").innerHTML=rungs.map(r=>`<div class="rung"><div class="t"><span style="color:var(--faint)">${r[0]} · ${r[3]}</span><span class="amt">${fmt(r[1])}</span></div><div class="b" style="width:${Math.max(r[1]?3:0,r[1]/max*100)}%;background:${r[2]}"></div></div>`).join("");
+  const counts=STAGES.slice(0,9).map(s=>all().filter(p=>furthest(p)>=STAGES.indexOf(s)).length);const fmax=Math.max(1,...counts);
+  $("#funnel").innerHTML=STAGES.slice(0,9).map((s,i)=>`<div class="fn"><span class="n">${s}</span><span class="bar" style="width:${Math.max(counts[i]?6:0,counts[i]/fmax*100)}%"></span><span class="amt" style="width:26px">${counts[i]}</span></div>`).join("");}
+
+function renderCollect(){const ps=all();const collected=ps.filter(p=>p.fee_paid).reduce((a,p)=>a+feeAmt(p.amount),0);$("#colTag").textContent=fmt(collected)+" collected";
+  const toInv=ps.filter(p=>p.funds_received&&!p.fee_invoiced);const awaiting=ps.filter(p=>p.fee_invoiced&&!p.fee_paid);
+  let h="";if(toInv.length){h+='<div class="l" style="font-size:11px;text-transform:uppercase;color:var(--faint);margin:4px 0 8px">They got paid — send the invoice / thank-you</div>';
+    h+=toInv.map(p=>{const m=(p.fee_model||recommendedMode(p));return `<div class="row"><div class="nm">${esc(p.name)} <span class="amt">${fmt(feeAmt(p.amount))}</span> <span class="pill ${m==='GRATUITY'?'ok':'info'}">${m==='GRATUITY'?'thank-you':'invoice'}</span></div>
+      <div class="btns" style="margin-top:5px"><button class="btn pri" onclick="invoiceDlg('${p.property_id}')">Generate & print</button><button class="btn" onclick="markPaid('${p.property_id}')">Mark fee paid</button></div></div>`;}).join("");}
+  if(awaiting.length)h+=`<div class="meta" style="margin-top:10px">${awaiting.length} invoiced, awaiting the fee.</div>`;
+  $("#collections").innerHTML=h||'<div class="empty">No open collections. When a claimant gets paid, hit 💵 on their row.</div>';}
+
+/* ---------- tabs ---------- */
+const TABS=["leads","house","today","money","collect"];
+$("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;$("#tabs").querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b));
+  TABS.forEach(t=>$("#tab-"+t).classList.toggle("hide",t!==TAB));});
+$("#search").oninput=renderLeads;$("#stageFilter").onchange=renderLeads;
+
+/* ---------- modal ---------- */
+function modal(head,body,foot){$("#mh").textContent=head;$("#mb").innerHTML=body;$("#mf").innerHTML="";
+  (foot||[["Close","",()=>$("#modal").close()]]).forEach(([l,c,fn])=>{const b=document.createElement("button");b.className="btn "+(c||"");b.textContent=l;b.onclick=fn;$("#mf").appendChild(b);});$("#modal").showModal();}
+window.closeModal=()=>$("#modal").close();
+
+/* ---------- actions ---------- */
+function upd(pid,fields){Object.assign(DB.prospects[pid],fields,{updated_at:nowISO()});save();render();}
+function setStage(pid,st,note){const p=DB.prospects[pid];p.history=p.history||[];if(p.stage&&!p.history.includes(p.stage))p.history.push(p.stage);p.stage=st;p.updated_at=nowISO();save();render();}
+window.toggleMode=pid=>{const p=DB.prospects[pid];const cur=p.fee_model||recommendedMode(p);upd(pid,{fee_model:cur==='GRATUITY'?'CONTRACT':'GRATUITY'});toast("Mode set");};
+window.suppress=pid=>{if(!confirm("Suppress this record? Terminal — no further outreach."))return;const p=DB.prospects[pid];p.suppression_status="SUPPRESSED";p.consent_status="WITHDRAWN";setStage(pid,"SUPPRESSED","suppressed");toast("Suppressed");};
+window.stageDlg=pid=>{const p=DB.prospects[pid];modal("Move stage — "+p.name,
+  '<label class="f">Stage</label><select id="stg" class="inp" style="width:100%">'+STAGES.slice(0,9).map(s=>`<option ${p.stage===s?'selected':''}>${s}</option>`).join("")+'</select>',
+  [["Cancel","",closeModal],["Save","pri",()=>{setStage(pid,$("#stg").value,"manual");closeModal();toast("Stage updated");}]]);};
+
+window.verifyDlg=pid=>{const p=DB.prospects[pid];modal("Verify custody — "+p.name,
+  `<p class="meta">Look the property up at <b>revenue.wi.gov/Pages/UnclaimedProperty</b>, confirm when it entered state custody, and record it with a note. Eligible only if 24+ months.</p>
+   <label class="f">Custody date (YYYY-MM-DD, or just the year)</label><input id="cd" value="${esc(p.custody_date||p.report_year||'')}" placeholder="2021-05-01">
+   <label class="f">Evidence — how you confirmed it (required)</label><textarea id="ev" rows="2" placeholder="WI DOR lookup ${new Date().toISOString().slice(0,10)}; property still listed">${esc(p.custody_evidence||'')}</textarea>`,
+  [["Cancel","",closeModal],["Record","pri",()=>{const cd=$("#cd").value.trim(),ev=$("#ev").value.trim();if(!cd||!ev){toast("Date and evidence both required");return;}
+    const el=eligible({custody_date:cd});upd(pid,{custody_date:cd,custody_evidence:ev,eligibility_reason:el.why,eligibility_reviewed:el.ok,custody_checked:true});
+    if(el.ok&&DB.prospects[pid].stage==="IDENTIFIED")setStage(pid,"ENRICHED","verified");
+    closeModal();toast(el.ok?"Eligible ✓ — agreement unlocked":"Recorded — "+el.why);}]]);};
+
+function nameParts(p){const first=p.first||(p.name||"").split(" ")[0]||"";const last=p.last||(p.name||"").split(" ").slice(-1)[0]||"";return{first,last};}
+window.findDlg=pid=>{const p=DB.prospects[pid];const {first,last}=nameParts(p);const city=p.city||"";
+  const primary=(first+" "+last).trim();const plus=s=>encodeURIComponent(s).replace(/%20/g,"+");const csz=city?plus(city+", WI"):"WI";
+  const dead=isDeceased(p);
+  const variants=[primary].concat((NICK[first.toUpperCase()]||[]).map(n=>n+" "+last));
+  const [fs,fl]=findabilityOf(p);
+  const lev=leverageOf(pid);
+  /* Relatives already in the list are the strongest lead a skip-trace can have:
+     a real human at the same address who shares the surname. */
+  const rel=(GRAPH.houses.get(householdKey(p))||[]).filter(x=>x.property_id!==pid&&x.suppression_status!=="SUPPRESSED");
+  let links=[];
+  if(dead){links.push(["Obituary (names the survivors — your heirs)","high",`https://www.legacy.com/search?query=${plus(primary)}`]);
+    links.push(["Find a Grave (family plot → relatives)","medium",`https://www.findagrave.com/memorial/search?firstname=${plus(first)}&lastname=${plus(last)}&location=Wisconsin`]);}
+  links.push(["TruePeopleSearch","high",`https://www.truepeoplesearch.com/results?name=${plus(primary)}&citystatezip=${csz}`]);
+  links.push(["FastPeopleSearch","high",`https://www.fastpeoplesearch.com/name/${encodeURIComponent(primary.replace(/ /g,'-'))}_${encodeURIComponent(city.replace(/ /g,'-'))}-wi`]);
+  if(p.last_known_address){const street=String(p.last_known_address).split(",")[0];
+    links.push(["Search the ADDRESS (finds whoever lives there now)","high",`https://www.fastpeoplesearch.com/address/${encodeURIComponent(street.replace(/ /g,'-'))}_${encodeURIComponent(city.replace(/ /g,'-'))}-wi`]);}
+  links.push(["Google name+city+phone","medium",`https://www.google.com/search?q=${plus('"'+primary+'" '+city+' WI phone')}`]);
+  links.push(["Facebook","low",`https://www.facebook.com/search/people/?q=${plus(primary)}`]);
+  const body=`<div style="margin-bottom:8px"><span class="pill ${fs>=70?'ok':fs>=45?'warn':'danger'}">findability ${fs} · ${fl}</span>${dead?' <span class="pill danger">likely deceased → find the heirs</span>':''}${lev.claims>1?` <span class="pill info">×${lev.claims} claims · ${fmt(lev.own_total)}</span>`:''}</div>
+    ${lev.claims>1?`<div class="meta" style="margin-bottom:8px">Worth finding: this person has <b>${lev.claims} claims</b> totalling <b>${fmt(lev.own_total)}</b> — one call covers all of them.</div>`:""}
+    ${rel.length?`<div class="meta" style="margin-bottom:10px;padding:8px 10px;border-left:3px solid var(--accent);background:var(--surface2);border-radius:6px">
+       <b>Family already in your list at this address</b> — reach any living one of them and you can usually reach the rest:<br>${rel.map(r=>esc(r.name)+(isDeceased(r)?' <span class="pill danger">deceased</span>':"")+(r.phone||r.email?" <b>"+esc(r.phone||r.email)+"</b>":"")).join("<br>")}</div>`:""}
+    ${variants.length>1?`<div class="meta" style="margin-bottom:10px">Also try: <b>${variants.slice(1).map(esc).join(" · ")}</b></div>`:""}
+    ${links.map(l=>`<a href="${l[2]}" target="_blank" rel="noopener" style="display:block;text-decoration:none;color:inherit;border:1px solid var(--line);border-radius:9px;padding:10px 12px;margin-bottom:7px;background:var(--surface2)"><b>${l[0]}</b> <span class="pill ${l[1]==='high'?'ok':l[1]==='medium'?'info':'dim'}">${l[1]}</span> <span style="float:right;color:var(--accent2)">open ↗</span></a>`).join("")}
+    <label class="f">Found their phone / email? Paste it here</label>
+    <input id="foundContact" placeholder="(715) 555-0142 or name@email.com" value="${esc(p.phone||p.email||'')}">`;
+  modal("Find "+p.name,body,[["Close","",closeModal],["Save contact","pri",()=>{const v=$("#foundContact").value.trim();if(!v)return closeModal();
+    const isEmail=v.includes("@");upd(pid,isEmail?{email:v}:{phone:v});if(DB.prospects[pid].stage==="IDENTIFIED")setStage(pid,"ENRICHED","contact found");closeModal();toast("Contact saved");}]]);};
+
+/* ----- letters / invoices: printable windows (Chromebook: Ctrl+P → Save as PDF) ----- */
+function openPrintable(title,html){const w=window.open("","_blank");if(!w){toast("Allow pop-ups to open the letter");return;}
+  w.document.write(`<!doctype html><title>${title}</title><style>body{font:15px/1.6 Georgia,serif;max-width:640px;margin:40px auto;padding:0 24px;color:#111}h1{font-size:20px}.muted{color:#666;font-size:12px}.foot{margin-top:30px;border-top:1px solid #ccc;padding-top:10px;font-size:11px;color:#666}@media print{.noprint{display:none}}</style>
+    <div class="noprint" style="margin-bottom:16px"><button onclick="window.print()" style="font:inherit;padding:8px 16px;background:#1c6b45;color:#fff;border:0;border-radius:8px;cursor:pointer">🖨 Print / Save as PDF</button></div>${html}`);w.document.close();}
+const DISCLOSURE="You have the right to claim this property yourself, directly from the State of Wisconsin, at no cost, at revenue.wi.gov/Pages/UnclaimedProperty or (608) 267-7977. ZGroup LLC is a private locator service, not the State of Wisconsin, and its assistance is optional.";
+window.letterDlg=pid=>{const p=DB.prospects[pid];const {first}=nameParts(p);let mode=p.fee_model||recommendedMode(p);const amt=fmt(p.amount);const holder=p.holder||"a past account";
+  // Compliance gate: a contract letter offers a fee agreement, which is VOID before
+  // 24 months of custody. Not eligible → the gratuity letter is the only option.
+  if(mode==="CONTRACT"&&!p.eligibility_reviewed){
+    modal("Verify custody first — "+p.name,
+      `<p>This record isn't verified eligible yet${p.eligibility_reason?` (<b>${esc(p.eligibility_reason)}</b>)`:""}.</p>
+       <p class="meta">A fee agreement signed before the property has been in state custody 24 months is <b>void</b> — you couldn't collect. Verify custody first, or send the no-contract gratuity letter instead (always fine — you're just telling someone about their money).</p>`,
+      [["Cancel","",closeModal],["Verify custody","",()=>{closeModal();verifyDlg(pid);}],
+       ["Send gratuity letter","pri",()=>{closeModal();upd(pid,{fee_model:"GRATUITY"});letterDlg(pid);}]]);
+    return;
+  }
+  const lev=leverageOf(pid);
+  if(lev.claims>1){
+    /* Don't mail someone one letter per claim — that's how a helpful note starts
+       to feel like junk mail. Offer the combined letter instead. */
+    modal("This person has "+lev.claims+" claims — "+p.name,
+      `<p>${esc(p.name)} has <b>${lev.claims} separate items</b> in your list, ${fmt(lev.own_total)} in total. One letter covering all of them lands better than ${lev.claims} letters, and it's one fee conversation instead of ${lev.claims}.</p>`,
+      [["Cancel","",closeModal],["Just this one claim","",()=>{closeModal();letterOne(pid);}],
+       ["Combined letter","pri",()=>{closeModal();combinedLetter(encodeURIComponent(bucketFor(p)));}]]);
+    return;
+  }
+  letterOne(pid);};
+function letterOne(pid){const p=DB.prospects[pid];const {first}=nameParts(p);const mode=p.fee_model||recommendedMode(p);
+  const amt=fmt(p.amount);const holder=p.holder||"a past account";
+  const body=mode==="GRATUITY"
+    ? `<p>Dear ${esc(first)},</p><p>I came across your name while researching Wisconsin unclaimed-property records, and it looks like the State of Wisconsin is holding about <b>${amt}</b> that belongs to you — originally from ${esc(holder)}. Most people never find out, so I wanted to let you know.</p>
+       <p>First, the honest part: this is your money, and you can claim it yourself for free at revenue.wi.gov. You don't need me. I'm a private person who helps people find and claim what's theirs — not the government.</p>
+       <p>If the paperwork feels like a hassle, I'm glad to walk you through it at no cost. If it works out and you'd like to send a thank-you of your choosing, that's kind — but never expected. Either way, I hope you get what's yours.</p>
+       <p>Warmly,<br>[Your Name] · ZGroup LLC · [phone] · [email]</p>`
+    : `<p>Dear ${esc(first)},</p><p>I came across your name while researching Wisconsin unclaimed-property records, and it looks like the State of Wisconsin is holding about <b>${amt}</b> that belongs to you — originally from ${esc(holder)}.</p>
+       <p>The honest part: this is your money and you can claim it yourself for free at revenue.wi.gov. I'm a private locator, not the government.</p>
+       <p>If you'd rather I handle the paperwork, I do that on contingency: a 10% fee (Wisconsin's maximum), agreed in writing first, owed only if you actually get paid — no upfront cost, cancel anytime. I've enclosed a one-page agreement. There's no obligation.</p>
+       <p>Sincerely,<br>[Your Name] · ZGroup LLC · [phone] · [email]</p>`;
+  const html=`<h1>ZGroup LLC <span class="muted">· Wisconsin unclaimed-property assistance</span></h1>
+    <p class="muted">${esc(p.name)}<br>${esc(p.last_known_address||"")}</p>${body}<div class="foot">${DISCLOSURE}</div>`;
+  modal((mode==="GRATUITY"?"🤝 Gratuity":"📄 Contract")+" letter — "+p.name,
+    `<p class="meta">Opens a clean printable page. On your Chromebook: <b>Print → Save as PDF</b>, then mail it (or copy the text into an email).</p><div style="max-height:300px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
+    [["Close","",closeModal],["Open printable letter","pri",()=>{openPrintable("Letter — "+p.name,html);if(DB.prospects[pid].stage==="ENRICHED"||DB.prospects[pid].stage==="IDENTIFIED")setStage(pid,"CONTACTED","letter generated");closeModal();}]]);}
+
+window.collectDlg=pid=>{const p=DB.prospects[pid];modal("They got paid — "+p.name,
+  `<p class="meta">Mark that the claimant received their money from the state. That unlocks the invoice (or, in gratuity mode, a thank-you).</p>`,
+  [["Cancel","",closeModal],["Mark funds received","pri",()=>{upd(pid,{funds_received:true,funds_received_date:nowISO()});setStage(pid,"PAID","funds received");closeModal();toast("Recorded — see Collections tab");TAB="collect";document.querySelector('[data-tab=collect]').click();}]]);};
+window.invoiceDlg=pid=>{const p=DB.prospects[pid];const mode=p.fee_model||recommendedMode(p);const {first}=nameParts(p);const fee=fmt(feeAmt(p.amount));
+  const html=mode==="GRATUITY"
+    ?`<h1>A note of thanks</h1><p>Hi ${esc(first)},</p><p>Wonderful news your unclaimed property came through — I'm genuinely happy you got what was yours. It was my pleasure to help.</p><p>There's no bill here and nothing you owe. If you'd like to send a thank-you of your own choosing, it's always appreciated — but never expected. If a friend ever needs a hand like this, I'm happy to help them too.</p><p>[Your Name] · ZGroup LLC</p><div class="foot">${DISCLOSURE}</div>`
+    :`<h1>Fee Invoice <span class="muted">· ${esc(p.property_id)}</span></h1><p>Billed to: ${esc(p.name)}</p>
+      <p>Property recovered from the State of Wisconsin: <b>${fmt(p.amount)}</b><br>Agreed locator fee (10% — Wisconsin maximum): <b style="color:#1a5c2a">${fee}</b></p>
+      <p>This is the fee we agreed in writing, now due because you've received your funds. As promised, no upfront cost and nothing owed unless you were paid. Thank you for trusting me with this.</p>
+      <p>Payment: [Venmo / PayPal / Zelle / Check]. No rush, and thanks again.<br>[Your Name] · ZGroup LLC</p><div class="foot">${DISCLOSURE}</div>`;
+  upd(pid,{fee_invoiced:true,fee_invoice_date:nowISO()});
+  openPrintable((mode==="GRATUITY"?"Thank-you":"Invoice")+" — "+p.name,html);toast(mode==="GRATUITY"?"Thank-you opened":"Invoice opened");};
+window.markPaid=pid=>{if(!confirm("Record the fee as PAID? Closes the record as collected."))return;upd(pid,{fee_paid:true,fee_paid_date:nowISO()});setStage(pid,"CLOSED","fee paid");toast("Fee collected 🎉");};
+
+/* ---------- import / sample / wipe ---------- */
+$("#importBtn").onclick=()=>$("#csvFile").click();
+$("#csvFile").onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>importCSV(r.result);r.readAsText(f);e.target.value="";};
+$("#wipeBtn").onclick=()=>{if(!confirm("Erase all leads from this device? Can't undo."))return;DB={prospects:{}};save();render();toast("Cleared");};
+$("#sampleBtn").onclick=()=>{const s=`Property ID,First Name,Last Name,Address 1,City,State,Zip,Amount,Property Type,Holder
+WI-100001,Gokhan,Kiyak,8459 S River Terrace Dr,Franklin,WI,53132,296308.99,Checking Accounts,US Bank NA
+WI-100002,Mary,Spies,1120 N 68th St,Wauwatosa,WI,53226,250665.24,Savings Accounts,US Bank NA
+WI-100003,Nancy,Trautmann,W152 N8645 Margaret Rd,Menomonee Falls,WI,53051,103328.79,Mature CD,Byline Bank
+WI-100004,Eudora,Keeton,712 Bluff St,Beloit,WI,53511,98366.56,Mature CD,BMO Bank NA
+WI-100005,Michael,Hershberger,2210 Sherman Ave,Madison,WI,53704,84979.53,Misc Outstanding Checks,Coinbase Inc
+WI-100006,Sam,Smalls,3312 Washington Ave,Racine,WI,53403,420.00,Utility Deposit,We Energies
+WI-100007,Estate of David,Krause,455 Forest Ave,Fond Du Lac,WI,54935,270934.69,Proceeds Due to Beneficiaries,Fond Du Lac County
+WI-100008,Michael,Hershberger,2210 Sherman Ave,Madison,WI,53704,6140.22,Savings Accounts,Summit Credit Union
+WI-100009,Mike,Hershberger,2210 Sherman Ave,Madison,WI,53704,3180.00,Utility Deposit,Madison Gas & Electric
+WI-100010,Linda,Krause,455 Forest Ave,Fond Du Lac,WI,54935,8425.10,Insurance Refund,Acuity Insurance
+WI-100011,Gregory,Krause,455 Forest Ave,Fond Du Lac,WI,54935,1290.45,Wages,Mercury Marine`;importCSV(s);};
+
+load();render();
+</script>
+
+</body>
+</html>

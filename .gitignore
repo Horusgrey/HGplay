@@ -1,0 +1,21 @@
+# Runtime artifacts — never commit real owner data or generated agreements
+__pycache__/
+*.pyc
+heirbud.db
+heirbud.db-journal
+contracts/
+letters/
+TODAY_ACTIONS.md
+CUSTODY_VERIFY.md
+
+# Real unclaimed-property exports — keep owner data OUT of the repo (PRJ-HB7K4).
+# Use synthetic fixtures for development/demos instead.
+WI_HeirFinder*.csv
+*_Priority_Targets*.csv
+*_Top100*.csv
+
+# Env / secrets
+.env
+*.local
+OPERATOR_BRIEF.md
+invoices/

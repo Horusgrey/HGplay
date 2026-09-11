@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en">
+<!--
+  GMAPz Scout — single-file location scouting + shot blocking for AI film.
+  RUN IT: best served over a tiny local server so Google 3D Tiles + KML fetch cleanly:
+      python3 -m http.server 8080     (then open http://localhost:8080/gmapz_scout.html)
+  It also opens fine by double-click; Google photoreal tiles just prefer a server.
+  KEYS (optional, paste in the Scout panel):
+      Google Map Tiles API key -> photorealistic 3D Earth
+      Cesium ion token         -> world terrain + OSM buildings
+  With no keys it still runs on keyless ESRI satellite imagery.
+-->
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>GMAPz Scout</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>window.CESIUM_BASE_URL='https://cdnjs.cloudflare.com/ajax/libs/cesium/1.131.0/';</script>
+<link id="cesium-css" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.131.0/Widgets/widgets.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cesium/1.131.0/Cesium.js" onerror="loadCesiumFallback()"></script>
+<script>
+function loadCesiumFallback(){
+  var base='https://cesium.com/downloads/cesiumjs/releases/1.131/Build/Cesium/';
+  window.CESIUM_BASE_URL=base;
+  document.getElementById('cesium-css').href=base+'Widgets/widgets.css';
+  var s=document.createElement('script');
+  s.src=base+'Cesium.js';
+  s.onload=function(){ if(window.__bootGmapz) window.__bootGmapz(); };
+  s.onerror=function(){ var l=document.getElementById('loadstat'); if(l){l.innerHTML='&#10007; Cesium engine could not load — check your connection.';l.style.color='#f87171';} };
+  document.head.appendChild(s);
+}
+</script>
+<style>
+  :root{
+    --bg:#0a0a0a;--panel:#09090b;--panel2:#101012;--line:#27272a;--line2:#3f3f46;
+    --txt:#e4e4e7;--dim:#a1a1aa;--faint:#71717a;
+    --yellow:#facc15;--emerald:#34d399;--vcs:#fb923c;--vco:#e8a23c;--blue:#60a5fa;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--txt);
+    font-family:'Space Grotesk',ui-sans-serif,system-ui,sans-serif;overflow:hidden;}
+  #app{display:grid;grid-template-columns:340px 1fr;height:100vh;}
+
+  .panel{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;overflow-y:auto;}
+  .panel::-webkit-scrollbar{width:9px;}.panel::-webkit-scrollbar-thumb{background:#2a2a2e;border-radius:5px;}
+  .brand{padding:15px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--panel);z-index:3;}
+  .brand h1{margin:0;font-size:15px;font-weight:700;letter-spacing:.04em;}
+  .brand h1 span{color:var(--yellow);}
+  .brand p{margin:2px 0 0;font-size:10px;color:var(--faint);letter-spacing:.14em;text-transform:uppercase;}
+  details.sec{border-bottom:1px solid var(--line);}
+  details.sec>summary{list-style:none;cursor:pointer;padding:11px 16px;font-size:11px;font-weight:600;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;justify-content:space-between;user-select:none;}
+  details.sec>summary::-webkit-details-marker{display:none;}
+  details.sec>summary:hover{color:var(--txt);}
+  details.sec>summary .ico{color:var(--faint);font-size:10px;transition:transform .2s;}
+  details.sec[open]>summary .ico{transform:rotate(90deg);}
+  .body{padding:4px 16px 16px;}
+  .row{display:flex;gap:7px;margin:7px 0;}
+  .row.wrap{flex-wrap:wrap;}
+  label.fld{display:block;font-size:10px;color:var(--faint);text-transform:uppercase;letter-spacing:.07em;margin:9px 0 3px;}
+  input[type=text],input[type=number],input[type=date],input[type=time],select,textarea{
+    width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--txt);
+    padding:7px 9px;font-size:12px;font-family:inherit;outline:none;}
+  input:focus,select:focus,textarea:focus{border-color:var(--line2);}
+  textarea{resize:vertical;min-height:46px;}
+  .num{width:100%;}
+  input[type=range]{width:100%;accent-color:var(--yellow);}
+  .btn{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:7px;color:var(--txt);
+    padding:8px 9px;font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;letter-spacing:.02em;
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;transition:.12s;}
+  .btn:hover{border-color:var(--line2);background:#161618;}
+  .btn.y{background:var(--yellow);color:#1a1500;border-color:var(--yellow);}
+  .btn.y:hover{filter:brightness(1.08);}
+  .btn.g{background:var(--emerald);color:#04231a;border-color:var(--emerald);}
+  .btn.vcs{background:var(--vcs);color:#2a1400;border-color:var(--vcs);}
+  .btn.vco{background:var(--vco);color:#2a1f00;border-color:var(--vco);}
+  .btn.sm{padding:6px 8px;font-size:10px;}
+  .btn.on{outline:1px solid var(--yellow);background:#1c1a0a;color:var(--yellow);border-color:var(--yellow);}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;}
+  .chip{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:5px 11px;font-size:11px;
+    cursor:pointer;color:var(--dim);transition:.12s;}
+  .chip:hover{border-color:var(--line2);color:var(--txt);}
+  .chip.on{background:var(--yellow);color:#1a1500;border-color:var(--yellow);font-weight:600;}
+  .readout{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:var(--dim);line-height:1.65;white-space:pre;
+    background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:9px 11px;margin-top:8px;}
+  .mini{font-size:10.5px;color:var(--faint);line-height:1.5;margin-top:6px;}
+  .list{margin-top:8px;display:flex;flex-direction:column;gap:6px;}
+  .item{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;}
+  .item .t{display:flex;justify-content:space-between;align-items:center;gap:8px;}
+  .item .x{color:var(--faint);cursor:pointer;font-size:14px;line-height:1;}
+  .item .x:hover{color:#f87171;}
+  .item.sel{border-color:var(--yellow);}
+  .tag{font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);}
+
+  .stage{position:relative;overflow:hidden;}
+  #cesium{position:absolute;inset:0;background:#05070d;}
+  .cesium-widget-credits,.cesium-credit-lightbox-overlay{display:none !important;}
+  #loadstat{position:absolute;top:14px;left:14px;z-index:6;background:rgba(9,9,11,.86);border:1px solid var(--line2);
+    border-radius:8px;padding:7px 11px;font-size:11px;color:var(--dim);font-family:ui-monospace,Menlo,monospace;}
+  .hud{position:absolute;top:14px;right:14px;z-index:6;display:flex;gap:8px;}
+  .hud .btn{flex:none;background:rgba(9,9,11,.86);}
+  .crosshair{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:4;pointer-events:none;width:34px;height:34px;}
+  .crosshair:before,.crosshair:after{content:"";position:absolute;background:rgba(250,204,21,.7);}
+  .crosshair:before{left:50%;top:0;width:1px;height:100%;transform:translateX(-.5px);}
+  .crosshair:after{top:50%;left:0;height:1px;width:100%;transform:translateY(-.5px);}
+  .maskbar{position:absolute;left:0;right:0;background:#000;z-index:3;pointer-events:none;transition:height .2s;}
+  #maskTop{top:0;}#maskBot{bottom:0;}
+  #maskL{position:absolute;top:0;bottom:0;left:0;background:#000;z-index:3;pointer-events:none;}
+  #maskR{position:absolute;top:0;bottom:0;right:0;background:#000;z-index:3;pointer-events:none;}
+  .gradelayer{position:absolute;inset:0;z-index:2;pointer-events:none;mix-blend-mode:overlay;opacity:0;transition:.3s;}
+  #captureFlash{position:absolute;inset:0;z-index:8;background:#fff;opacity:0;pointer-events:none;}
+  .thumbs{position:absolute;bottom:14px;left:14px;right:14px;z-index:6;display:flex;gap:8px;overflow-x:auto;padding:4px;}
+  .thumb{flex:none;width:104px;border:1px solid var(--line2);border-radius:6px;overflow:hidden;background:#000;cursor:pointer;position:relative;}
+  .thumb img{width:100%;display:block;}
+  .thumb .cap{font-size:9px;color:var(--dim);padding:3px 5px;background:rgba(0,0,0,.6);position:absolute;bottom:0;left:0;right:0;}
+  .toast{position:absolute;bottom:18px;left:50%;transform:translateX(-50%) translateY(20px);z-index:20;
+    background:#18181b;border:1px solid var(--line2);border-radius:9px;padding:10px 16px;font-size:12.5px;
+    opacity:0;transition:.25s;pointer-events:none;max-width:70%;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .modal{position:absolute;inset:0;z-index:30;background:rgba(0,0,0,.7);display:none;align-items:center;justify-content:center;}
+  .modal.show{display:flex;}
+  .card{background:var(--panel);border:1px solid var(--line2);border-radius:14px;max-width:560px;width:90%;max-height:84vh;
+    overflow-y:auto;padding:22px 24px;}
+  .card h3{margin:0 0 12px;font-size:15px;}
+  .card .k{font-family:ui-monospace,monospace;background:var(--panel2);border:1px solid var(--line);border-radius:5px;padding:1px 7px;font-size:11px;}
+  .card table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  .card td{padding:5px 4px;border-bottom:1px solid var(--line);color:var(--dim);}
+  .out{font-family:ui-monospace,Menlo,monospace;font-size:11px;white-space:pre-wrap;background:var(--panel2);
+    border:1px solid var(--line);border-radius:8px;padding:10px;color:var(--dim);max-height:200px;overflow:auto;margin-top:8px;}
+  .closex{float:right;cursor:pointer;color:var(--faint);font-size:18px;line-height:1;}
+  .kbd{position:absolute;bottom:14px;right:14px;z-index:5;font-size:10px;color:var(--faint);font-family:ui-monospace,monospace;
+    background:rgba(9,9,11,.7);border:1px solid var(--line);border-radius:6px;padding:4px 8px;}
+</style>
+</head>
+<body>
+<div id="app">
+  <aside class="panel">
+    <div class="brand"><h1>GMAPz <span>Scout</span></h1><p>Mobile Hollywood · location → block → spec</p></div>
+
+    <details class="sec" open><summary>Scout <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Search a place</label>
+        <div class="row"><input id="search" type="text" placeholder="e.g. Marina City Chicago"><button class="btn sm" id="searchBtn" style="flex:none;width:64px">Go</button></div>
+        <label class="fld">Presets</label>
+        <div class="chips" id="presets"></div>
+        <label class="fld">Load KML / KMZ</label>
+        <div class="row"><input id="kmlFile" type="file" accept=".kml,.kmz" style="font-size:11px;padding:5px"></div>
+        <label class="fld">Photoreal &amp; terrain keys (optional)</label>
+        <div class="row"><input id="googleKey" type="text" placeholder="Google Map Tiles API key"></div>
+        <div class="row"><input id="ionKey" type="text" placeholder="Cesium ion token"></div>
+        <div class="row"><button class="btn y" id="applyKeys">Apply keys &amp; reload Earth</button></div>
+        <div class="mini">No keys? Runs on keyless ESRI satellite. Google key = photorealistic 3D Earth.</div>
+      </div>
+    </details>
+
+    <details class="sec" open><summary>Camera — block the shot <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Shot size</label>
+        <div class="chips" id="shotSize"></div>
+        <label class="fld">Angle</label>
+        <div class="chips" id="angle"></div>
+        <label class="fld">Lens</label>
+        <div class="chips" id="lens"></div>
+        <div class="row" style="align-items:center;gap:10px;margin-top:6px">
+          <span class="tag" style="width:54px">FOV</span><input id="fovSlider" type="range" min="8" max="120" value="54"><span id="fovVal" class="tag" style="width:46px;text-align:right">54&deg;</span>
+        </div>
+        <label class="fld">Exact parameters (Google-Earth edit panel)</label>
+        <div class="row"><div style="flex:1"><span class="tag">Lat</span><input id="pLat" class="num" type="number" step="0.0001"></div><div style="flex:1"><span class="tag">Lon</span><input id="pLon" class="num" type="number" step="0.0001"></div></div>
+        <div class="row"><div style="flex:1"><span class="tag">Heading&deg;</span><input id="pHead" class="num" type="number" step="1"></div><div style="flex:1"><span class="tag">Tilt&deg;</span><input id="pTilt" class="num" type="number" step="1"></div><div style="flex:1"><span class="tag">Range m</span><input id="pRange" class="num" type="number" step="10"></div></div>
+        <div class="row"><button class="btn" id="getCurrent">Get current (G)</button><button class="btn y" id="flyParams">Fly to params (F)</button></div>
+        <div class="readout" id="readout">aim the globe…</div>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Light — lock the sun <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <div class="row"><div style="flex:1"><label class="fld">Date</label><input id="lDate" type="date"></div><div style="flex:1"><label class="fld">Time (UTC)</label><input id="lTime" type="time"></div></div>
+        <div class="row"><button class="btn" id="goldenBtn">Find golden hour</button></div>
+        <div class="list" id="goldenList"></div>
+        <div class="readout" id="sunReadout">sun —</div>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Style &amp; look <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Cinematic style (shapes the prompt)</label>
+        <div class="chips" id="styles"></div>
+        <label class="fld">Color grade (baked into capture)</label>
+        <div class="chips" id="grades"></div>
+        <label class="fld">Atmosphere</label>
+        <div class="chips" id="atmos"></div>
+        <label class="fld">Scene description</label>
+        <textarea id="sceneDesc" placeholder="What happens in frame — action, mood, subject."></textarea>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Cast &amp; props <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Sticker (click Place, then click the ground)</label>
+        <div class="chips" id="stickers"></div>
+        <div class="row"><button class="btn" id="placeMode">Place mode: OFF</button><button class="btn sm" id="clearMarkers" style="flex:none;width:70px">Clear</button></div>
+        <div class="mini">Drag a marker to move it. Select one, then Alt+scroll to raise/lower its height.</div>
+        <div class="list" id="markerList"></div>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Delivery <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Aspect (frames + crops the capture)</label>
+        <div class="chips" id="aspects"></div>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Shot sequence <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <label class="fld">Shot name</label>
+        <div class="row"><input id="shotName" type="text" placeholder="e.g. 01 — Tower establish"></div>
+        <div class="row"><button class="btn y" id="saveShot">Save shot (S)</button></div>
+        <div class="list" id="shotList"></div>
+        <div class="row"><button class="btn" id="scenePrompt">Generate full scene prompt</button></div>
+      </div>
+    </details>
+
+    <details class="sec"><summary>Capture &amp; export <span class="ico">&#9656;</span></summary>
+      <div class="body">
+        <div class="row"><button class="btn g" id="captureBtn">Capture frame (C)</button></div>
+        <label class="fld">i2v engine</label>
+        <div class="chips" id="engines"></div>
+        <div class="row"><button class="btn y" id="i2vBtn">Build i2v prompt + start frame</button></div>
+        <div class="row"><button class="btn" id="specBtn">Export gmapz.capture.v1 (.json)</button></div>
+        <div class="row"><button class="btn vcs" id="vcsBtn">VCS-15 handoff (.md)</button><button class="btn vco" id="vcoBtn">VCO (.json)</button></div>
+        <div class="row"><button class="btn sm" id="sessionSave">Save session</button><button class="btn sm" id="sessionLoadBtn">Load session</button><input id="sessionFile" type="file" accept=".json" style="display:none"></div>
+      </div>
+    </details>
+  </aside>
+
+  <main class="stage">
+    <div id="cesium"></div>
+    <div id="maskTop" class="maskbar"></div><div id="maskBot" class="maskbar"></div>
+    <div id="maskL"></div><div id="maskR"></div>
+    <div class="gradelayer" id="gradeLayer"></div>
+    <div class="crosshair" id="crosshair"></div>
+    <div id="captureFlash"></div>
+    <div id="loadstat">&#9676; booting engine…</div>
+    <div class="hud"><button class="btn sm" id="helpBtn">? Keys</button></div>
+    <div class="thumbs" id="thumbs"></div>
+    <div class="kbd">G get · F fly · C capture · S save · R reset · L kml · ? help</div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+<div class="modal" id="modal"><div class="card" id="modalCard"></div></div>
+
+<script>
+function boot(){
+'use strict';
+const $=id=>document.getElementById(id);
+const toRad=Cesium.Math.toRadians, toDeg=Cesium.Math.toDegrees;
+const ESRI='https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}';
+
+const S={
+  google:'',ion:'',
+  shotSize:'medium',angle:'eye',lensMm:35,fov:54,
+  target:{lat:41.8885,lon:-87.6345},head:30,tilt:-22,range:1200,
+  style:'cinematic',grade:'none',atmos:'clear',sceneDesc:'',
+  delivery:'2.39:1',sticker:'person',placeMode:false,engine:'runway',
+  markers:[],shots:[],captures:[],selMarker:null,_sun:null
+};
+const PRESETS=[
+  ['Marina City, Chicago',-87.6345,41.8885],['Times Square, NYC',-73.9855,40.7580],
+  ['Griffith Observatory',-118.3004,34.1184],['Golden Gate',-122.4783,37.8199],
+  ['Eiffel Tower',2.2945,48.8584],['Shibuya, Tokyo',139.7005,35.6595]
+];
+const SHOT_SIZES={ewide:{r:4500,label:'Establishing'},wide:{r:1600,label:'Wide'},medium:{r:650,label:'Medium'},close:{r:240,label:'Close'},detail:{r:90,label:'Detail'}};
+const ANGLES={aerial:-72,high:-45,eye:-12,low:6,worm:22};
+const LENSES=[16,24,35,50,70,85,135];
+const STYLES={
+  a24:{name:'A24',desc:'naturalistic, restrained palette, available light, 35mm grain, unhurried framing, emotional realism'},
+  panavision:{name:'Panavision',desc:'anamorphic widescreen, oval bokeh, horizontal flares, deep cinematic contrast, epic scale'},
+  pixar:{name:'Pixar',desc:'warm key light, soft global illumination, clean shapes, appealing depth, gentle saturation'},
+  realistic:{name:'Realistic',desc:'photoreal, physically accurate light, true-to-life color, documentary clarity'},
+  cinematic:{name:'Cinematic',desc:'shallow depth of field, motivated lighting, teal-amber separation, controlled contrast, filmic'}
+};
+const GRADES={none:null,cinematic:'contrast(1.12) saturate(1.12) brightness(.98)',teal:'contrast(1.15) saturate(1.2) hue-rotate(-6deg)',bleach:'contrast(1.25) saturate(.55) brightness(1.05)',noir:'grayscale(1) contrast(1.3) brightness(.95)',warm:'sepia(.22) saturate(1.25) contrast(1.05) brightness(1.03)'};
+const ATMOS={clear:{fog:.0001,hue:''},haze:{fog:.0008,hue:'brightness(1.05) contrast(.95)'},golden:{fog:.0003,hue:'sepia(.18) saturate(1.2)'},blue:{fog:.0005,hue:'brightness(.8) saturate(1.1) hue-rotate(8deg)'},storm:{fog:.0012,hue:'brightness(.78) saturate(.85) contrast(1.1)'},night:{fog:.0004,hue:'brightness(.5) saturate(.9)'}};
+const STICKERS={person:'#facc15',person2:'#34d399',vehicle:'#60a5fa',light:'#f472b6',marker:'#f87171'};
+const SHOTTYPES=['subject','background','foreground','vehicle','light','vfx'];
+const ASPECTS={'2.39:1':2.39,'1.85:1':1.85,'16:9':16/9,'4:3':4/3,'1:1':1,'9:16':9/16};
+const ENGINES={runway:'Runway Gen-4',kling:'Kling',veo:'Veo 3',sora:'Sora',luma:'Luma'};
+
+let viewer, googleTileset=null, osm=null;
+try{
+  viewer=new Cesium.Viewer('cesium',{
+    contextOptions:{webgl:{preserveDrawingBuffer:true}},
+    baseLayer:false, terrain:undefined,
+    timeline:false,animation:false,baseLayerPicker:false,geocoder:false,homeButton:false,
+    sceneModePicker:false,navigationHelpButton:false,fullscreenButton:false,infoBox:false,selectionIndicator:false
+  });
+}catch(e){ const l=$('loadstat'); l.innerHTML='&#10007; WebGL/viewer failed: '+e.message; l.style.color='#f87171'; return; }
+viewer.imageryLayers.add(new Cesium.ImageryLayer(new Cesium.UrlTemplateImageryProvider({url:ESRI,maximumLevel:19})));
+viewer.scene.globe.enableLighting=true;
+viewer.scene.skyAtmosphere.show=true;
+viewer.scene.fog.enabled=true; viewer.scene.fog.density=0.0001;
+viewer.clock.shouldAnimate=false;
+setStat('&#10003; ESRI satellite (add a Google key for photoreal)','#fbbf24');
+
+async function reloadEarth(){
+  S.google=$('googleKey').value.trim(); S.ion=$('ionKey').value.trim();
+  if(googleTileset){viewer.scene.primitives.remove(googleTileset);googleTileset=null;}
+  if(osm){viewer.scene.primitives.remove(osm);osm=null;}
+  viewer.scene.globe.show=true;
+  if(S.google){
+    try{ setStat('&#9676; loading photoreal tiles…');
+      Cesium.GoogleMaps.defaultApiKey=S.google;
+      googleTileset=await Cesium.createGooglePhotorealistic3DTileset();
+      viewer.scene.primitives.add(googleTileset);
+      viewer.scene.globe.show=false;
+      setStat('&#10003; photoreal Earth','#34d399'); toast('Photoreal 3D tiles loaded'); return;
+    }catch(e){ console.warn('google tiles failed',e); toast('Google tiles failed — check key/billing'); }
+  }
+  if(S.ion){
+    try{ setStat('&#9676; loading terrain…');
+      Cesium.Ion.defaultAccessToken=S.ion;
+      viewer.terrainProvider=await Cesium.createWorldTerrainAsync();
+      try{osm=await Cesium.createOsmBuildingsAsync();viewer.scene.primitives.add(osm);}catch(_){}
+      setStat('&#10003; ion terrain + buildings','#34d399'); toast('Terrain loaded'); return;
+    }catch(e){ console.warn('ion failed',e); toast('ion token failed'); }
+  }
+  setStat('&#10003; ESRI satellite (keyless)','#fbbf24');
+}
+$('applyKeys').onclick=reloadEarth;
+
+function flyToParams(dur){
+  const center=Cesium.Cartesian3.fromDegrees(S.target.lon,S.target.lat);
+  const hpr=new Cesium.HeadingPitchRange(toRad(S.head),toRad(S.tilt),S.range);
+  viewer.camera.flyToBoundingSphere(new Cesium.BoundingSphere(center,1),{offset:hpr,duration:dur===undefined?1.2:dur});
+  applyFov();
+}
+function applyFov(){ const f=viewer.camera.frustum; if(f&&f.fov!==undefined) f.fov=toRad(S.fov); }
+function screenCenterGround(){
+  const c=new Cesium.Cartesian2(viewer.canvas.clientWidth/2,viewer.canvas.clientHeight/2);
+  let p=viewer.scene.pickPosition?viewer.scene.pickPosition(c):undefined;
+  if(!Cesium.defined(p)){ const ray=viewer.camera.getPickRay(c); p=viewer.scene.globe.pick(ray,viewer.scene); }
+  if(!Cesium.defined(p)){ p=viewer.camera.pickEllipsoid(c); }
+  return p;
+}
+function getCurrent(){
+  const cam=viewer.camera, carto=cam.positionCartographic;
+  S.head=Math.round(toDeg(cam.heading)); S.tilt=Math.round(toDeg(cam.pitch));
+  const g=screenCenterGround();
+  if(Cesium.defined(g)){ const gc=Cesium.Cartographic.fromCartesian(g);
+    S.target.lat=+toDeg(gc.latitude).toFixed(5); S.target.lon=+toDeg(gc.longitude).toFixed(5);
+    S.range=Math.round(Cesium.Cartesian3.distance(cam.positionWC,g));
+  } else { S.target.lat=+toDeg(carto.latitude).toFixed(5); S.target.lon=+toDeg(carto.longitude).toFixed(5); S.range=Math.round(carto.height); }
+  if(cam.frustum.fov!==undefined) S.fov=Math.round(toDeg(cam.frustum.fov));
+  syncCamUI(); toast('Captured current camera');
+}
+function syncCamUI(){
+  $('pLat').value=S.target.lat;$('pLon').value=S.target.lon;
+  $('pHead').value=S.head;$('pTilt').value=S.tilt;$('pRange').value=S.range;
+  $('fovSlider').value=S.fov;$('fovVal').textContent=S.fov+'\u00b0';
+  S.lensMm=fovToLens(S.fov);
+  paintChips('lens',LENSES.map(l=>[l+'mm',l]),nearestLens(S.lensMm),v=>{S.lensMm=v;S.fov=lensToFov(v);applyFov();syncCamUI();});
+}
+const lensToFov=(mm,sensor=36)=>Math.round(2*Math.atan(sensor/(2*mm))*180/Math.PI);
+const fovToLens=(fov,sensor=36)=>Math.round(sensor/(2*Math.tan(fov*Math.PI/360)));
+const nearestLens=mm=>LENSES.reduce((a,b)=>Math.abs(b-mm)<Math.abs(a-mm)?b:a);
+
+viewer.scene.postRender.addEventListener(()=>{
+  const cam=viewer.camera,carto=cam.positionCartographic;
+  $('readout').textContent=
+   'cam lat '+toDeg(carto.latitude).toFixed(5)+'\n'+
+   'cam lon '+toDeg(carto.longitude).toFixed(5)+'\n'+
+   'cam alt '+Math.round(carto.height)+' m\n'+
+   'heading '+Math.round(toDeg(cam.heading))+'\u00b0  tilt '+Math.round(toDeg(cam.pitch))+'\u00b0\n'+
+   'lens    '+(cam.frustum.fov!==undefined?fovToLens(toDeg(cam.frustum.fov))+'mm / '+Math.round(toDeg(cam.frustum.fov))+'\u00b0':'-');
+});
+
+function paintChips(containerId,items,active,onPick){
+  const c=$(containerId); c.innerHTML='';
+  items.forEach(([label,val])=>{
+    const d=document.createElement('div'); d.className='chip'+(val===active?' on':''); d.textContent=label;
+    d.onclick=()=>{ onPick(val); [...c.children].forEach(x=>x.classList.remove('on')); d.classList.add('on'); };
+    c.appendChild(d);
+  });
+}
+const pc=$('presets'); PRESETS.forEach(([n,lon,lat])=>{const d=document.createElement('div');d.className='chip';d.textContent=n.split(',')[0];d.title=n;d.onclick=()=>{S.target={lat,lon};flyToParams();syncCamUI();toast('Scouting '+n);};pc.appendChild(d);});
+paintChips('shotSize',Object.entries(SHOT_SIZES).map(([k,v])=>[v.label,k]),S.shotSize,v=>{S.shotSize=v;S.range=SHOT_SIZES[v].r;flyToParams();syncCamUI();});
+paintChips('angle',Object.keys(ANGLES).map(k=>[k,k]),S.angle,v=>{S.angle=v;S.tilt=ANGLES[v];flyToParams();syncCamUI();});
+paintChips('lens',LENSES.map(l=>[l+'mm',l]),35,v=>{S.lensMm=v;S.fov=lensToFov(v);applyFov();syncCamUI();});
+paintChips('styles',Object.entries(STYLES).map(([k,v])=>[v.name,k]),S.style,v=>S.style=v);
+paintChips('grades',Object.keys(GRADES).map(k=>[k,k]),S.grade,v=>{S.grade=v;applyGrade();});
+paintChips('atmos',Object.keys(ATMOS).map(k=>[k,k]),S.atmos,v=>{S.atmos=v;applyAtmos();});
+paintChips('stickers',Object.keys(STICKERS).map(k=>[k,k]),S.sticker,v=>S.sticker=v);
+paintChips('aspects',Object.keys(ASPECTS).map(k=>[k,k]),S.delivery,v=>{S.delivery=v;applyMask();});
+paintChips('engines',Object.entries(ENGINES).map(([k,v])=>[v,k]),S.engine,v=>S.engine=v);
+
+$('fovSlider').oninput=e=>{S.fov=+e.target.value;$('fovVal').textContent=S.fov+'\u00b0';applyFov();S.lensMm=fovToLens(S.fov);};
+['pLat','pLon','pHead','pTilt','pRange'].forEach(id=>$(id).onchange=()=>{
+  S.target.lat=+$('pLat').value;S.target.lon=+$('pLon').value;S.head=+$('pHead').value;S.tilt=+$('pTilt').value;S.range=+$('pRange').value;
+});
+$('getCurrent').onclick=getCurrent;
+$('flyParams').onclick=()=>flyToParams();
+
+function applyGrade(){ const g=$('gradeLayer'); g.style.opacity=0; }
+function applyAtmos(){ const a=ATMOS[S.atmos]; viewer.scene.fog.density=a.fog;
+  if(viewer.scene.skyAtmosphere) viewer.scene.skyAtmosphere.brightnessShift = S.atmos==='night'?-0.5:(S.atmos==='golden'?0.1:0);
+}
+function applyMask(){
+  const r=ASPECTS[S.delivery], w=viewer.canvas.clientWidth, h=viewer.canvas.clientHeight, cur=w/h;
+  let mt=0,ml=0;
+  if(cur>r){ const tw=h*r; ml=(w-tw)/2; } else { const th=w/r; mt=(h-th)/2; }
+  $('maskTop').style.height=mt+'px';$('maskBot').style.height=mt+'px';
+  $('maskL').style.width=ml+'px';$('maskR').style.width=ml+'px';
+}
+window.addEventListener('resize',applyMask);
+
+function sunPos(lat,lon,date){
+  const rad=Math.PI/180;
+  const start=Date.UTC(date.getUTCFullYear(),0,0);
+  const day=Math.floor((date-start)/864e5);
+  const mins=date.getUTCHours()*60+date.getUTCMinutes();
+  const frac=(day-1+(mins-720)/1440)/365;
+  const g=2*Math.PI*frac;
+  const eqt=229.18*(0.000075+0.001868*Math.cos(g)-0.032077*Math.sin(g)-0.014615*Math.cos(2*g)-0.040849*Math.sin(2*g));
+  const decl=0.006918-0.399912*Math.cos(g)+0.070257*Math.sin(g)-0.006758*Math.cos(2*g)+0.000907*Math.sin(2*g)-0.002697*Math.cos(3*g)+0.00148*Math.sin(3*g);
+  const toff=eqt+4*lon;
+  const tst=(mins+toff)%1440;
+  const ha=(tst/4)-180;
+  const za=Math.acos(Math.sin(lat*rad)*Math.sin(decl)+Math.cos(lat*rad)*Math.cos(decl)*Math.cos(ha*rad));
+  const el=90-za/rad;
+  let az=Math.atan2(Math.sin(ha*rad),Math.cos(ha*rad)*Math.sin(lat*rad)-Math.tan(decl)*Math.cos(lat*rad))/rad+180;
+  return {el:el, az:(az+360)%360};
+}
+function phaseOf(el){ if(el<-6)return 'night'; if(el<0)return 'blue'; if(el<8)return 'golden'; return 'day'; }
+function localDateTime(){ const dv=$('lDate').value, tv=$('lTime').value; if(!dv||!tv) return new Date(); return new Date(dv+'T'+tv+':00Z'); }
+function setClockFrom(dt){ viewer.clock.currentTime=Cesium.JulianDate.fromDate(dt); }
+function updateSun(){
+  const dt=localDateTime(); setClockFrom(dt);
+  const s=sunPos(S.target.lat,S.target.lon,dt);
+  $('sunReadout').textContent='sun az '+s.az.toFixed(0)+'\u00b0  el '+s.el.toFixed(1)+'\u00b0\nphase  '+phaseOf(s.el);
+  S._sun=s;
+}
+$('lDate').onchange=updateSun; $('lTime').onchange=updateSun;
+$('goldenBtn').onclick=()=>{
+  const dv=$('lDate').value||new Date().toISOString().slice(0,10);
+  const wins=[]; let cur=null;
+  for(let m=0;m<1440;m+=10){
+    const dt=new Date(dv+'T00:00:00Z'); dt.setUTCMinutes(m);
+    const el=sunPos(S.target.lat,S.target.lon,dt).el;
+    const good=el>=-6&&el<=8;
+    if(good&&!cur)cur={start:m}; if(!good&&cur){cur.end=m;wins.push(cur);cur=null;}
+  }
+  if(cur){cur.end=1440;wins.push(cur);}
+  const L=$('goldenList'); L.innerHTML='';
+  if(!wins.length){L.innerHTML='<div class="mini">No golden/blue window this day at this latitude.</div>';return;}
+  const hhmm=m=>String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+  wins.forEach(w=>{
+    const d=document.createElement('div');d.className='item';
+    d.innerHTML='<div class="t"><span>'+hhmm(w.start)+' – '+hhmm(w.end)+' UTC</span><span class="tag">golden/blue</span></div>';
+    d.onclick=()=>{const mid=Math.floor((w.start+w.end)/2);$('lTime').value=hhmm(mid);$('lDate').value=dv;updateSun();toast('Set to golden hour');};
+    L.appendChild(d);
+  });
+};
+
+let dragging=null;
+const handler=new Cesium.ScreenSpaceEventHandler(viewer.canvas);
+function pinSvg(color){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="36" height="48" viewBox="0 0 36 48"><path d="M18 47C18 47 33 28 33 16A15 15 0 1 0 3 16C3 28 18 47 18 47Z" fill="'+color+'" stroke="#0a0a0a" stroke-width="2"/><circle cx="18" cy="16" r="6" fill="#0a0a0a"/></svg>';
+  return 'data:image/svg+xml;base64,'+btoa(svg);
+}
+function addMarker(lon,lat,height,type,shotType){
+  const id='m'+Date.now()+Math.floor(Math.random()*99);
+  viewer.entities.add({
+    id, position:Cesium.Cartesian3.fromDegrees(lon,lat,height||0),
+    billboard:{image:pinSvg(STICKERS[type]||'#facc15'),verticalOrigin:Cesium.VerticalOrigin.BOTTOM,scale:.8,disableDepthTestDistance:Number.POSITIVE_INFINITY},
+    label:{text:(shotType||'subject'),font:'11px monospace',fillColor:Cesium.Color.WHITE,showBackground:true,backgroundColor:Cesium.Color.fromCssColorString('#000000aa'),pixelOffset:new Cesium.Cartesian2(0,8),verticalOrigin:Cesium.VerticalOrigin.TOP,scale:.9,disableDepthTestDistance:Number.POSITIVE_INFINITY}
+  });
+  S.markers.push({id,lon,lat,height:height||0,type,shotType:shotType||'subject'});
+  renderMarkerList();
+}
+function renderMarkerList(){
+  const L=$('markerList'); L.innerHTML='';
+  S.markers.forEach(m=>{
+    const d=document.createElement('div');d.className='item'+(S.selMarker===m.id?' sel':'');
+    d.innerHTML='<div class="t"><span>'+m.type+' <span class="tag">'+m.height.toFixed(0)+'m</span></span><span class="x" data-x="'+m.id+'">&times;</span></div>';
+    const sel=document.createElement('select');SHOTTYPES.forEach(t=>{const o=document.createElement('option');o.value=t;o.textContent=t;if(t===m.shotType)o.selected=true;sel.appendChild(o);});
+    sel.style.marginTop='6px';sel.onchange=()=>{m.shotType=sel.value;const e=viewer.entities.getById(m.id);if(e)e.label.text=sel.value;};
+    const rng=document.createElement('input');rng.type='range';rng.min=0;rng.max=400;rng.value=m.height;rng.style.marginTop='6px';
+    rng.oninput=()=>{m.height=+rng.value;const e=viewer.entities.getById(m.id);if(e)e.position=Cesium.Cartesian3.fromDegrees(m.lon,m.lat,m.height);d.querySelector('.tag').textContent=m.height.toFixed(0)+'m';};
+    d.onclick=ev=>{if(ev.target.dataset.x)return;S.selMarker=m.id;renderMarkerList();};
+    d.appendChild(sel);d.appendChild(rng);L.appendChild(d);
+  });
+  L.querySelectorAll('[data-x]').forEach(x=>x.onclick=()=>{const id=x.dataset.x;viewer.entities.removeById(id);S.markers=S.markers.filter(m=>m.id!==id);if(S.selMarker===id)S.selMarker=null;renderMarkerList();});
+}
+$('placeMode').onclick=()=>{S.placeMode=!S.placeMode;$('placeMode').textContent='Place mode: '+(S.placeMode?'ON':'OFF');$('placeMode').classList.toggle('on',S.placeMode);};
+$('clearMarkers').onclick=()=>{S.markers.forEach(m=>viewer.entities.removeById(m.id));S.markers=[];S.selMarker=null;renderMarkerList();};
+function screenPick(pos){
+  let p=viewer.scene.pickPosition?viewer.scene.pickPosition(pos):undefined;
+  if(!Cesium.defined(p)){const ray=viewer.camera.getPickRay(pos);p=viewer.scene.globe.pick(ray,viewer.scene);}
+  if(!Cesium.defined(p))p=viewer.camera.pickEllipsoid(pos);
+  return p;
+}
+handler.setInputAction(click=>{
+  if(S.placeMode){
+    let p=screenPick(click.position);
+    if(Cesium.defined(p)){const c=Cesium.Cartographic.fromCartesian(p);addMarker(toDeg(c.longitude),toDeg(c.latitude),0,S.sticker);}
+    return;
+  }
+  const picked=viewer.scene.pick(click.position);
+  if(picked&&picked.id&&picked.id.id){S.selMarker=picked.id.id;renderMarkerList();}
+},Cesium.ScreenSpaceEventType.LEFT_CLICK);
+handler.setInputAction(down=>{
+  if(S.placeMode)return;
+  const picked=viewer.scene.pick(down.position);
+  if(picked&&picked.id&&picked.id.id){const m=S.markers.find(x=>x.id===picked.id.id);if(m){dragging=m;S.selMarker=m.id;viewer.scene.screenSpaceCameraController.enableInputs=false;renderMarkerList();}}
+},Cesium.ScreenSpaceEventType.LEFT_DOWN);
+handler.setInputAction(move=>{
+  if(!dragging)return; const p=screenPick(move.endPosition);
+  if(Cesium.defined(p)){const c=Cesium.Cartographic.fromCartesian(p);dragging.lon=toDeg(c.longitude);dragging.lat=toDeg(c.latitude);
+    const e=viewer.entities.getById(dragging.id);if(e)e.position=Cesium.Cartesian3.fromDegrees(dragging.lon,dragging.lat,dragging.height);}
+},Cesium.ScreenSpaceEventType.MOUSE_MOVE);
+handler.setInputAction(()=>{if(dragging){dragging=null;viewer.scene.screenSpaceCameraController.enableInputs=true;}},Cesium.ScreenSpaceEventType.LEFT_UP);
+viewer.canvas.addEventListener('wheel',e=>{
+  if(!e.altKey||!S.selMarker)return; e.preventDefault();
+  const m=S.markers.find(x=>x.id===S.selMarker);if(!m)return;
+  m.height=Math.max(0,m.height+(e.deltaY<0?10:-10));
+  const ent=viewer.entities.getById(m.id);if(ent)ent.position=Cesium.Cartesian3.fromDegrees(m.lon,m.lat,m.height);
+  renderMarkerList();
+},{passive:false});
+
+$('searchBtn').onclick=doSearch; $('search').addEventListener('keydown',e=>{if(e.key==='Enter')doSearch();});
+async function doSearch(){
+  const q=$('search').value.trim(); if(!q)return; toast('Searching…');
+  try{
+    const r=await fetch('https://nominatim.openstreetmap.org/search?format=json&limit=1&q='+encodeURIComponent(q),{headers:{'Accept':'application/json'}});
+    const j=await r.json();
+    if(j&&j[0]){S.target={lat:+j[0].lat,lon:+j[0].lon};flyToParams();syncCamUI();toast('Found: '+j[0].display_name.split(',')[0]);}
+    else toast('No match');
+  }catch(e){toast('Search blocked (CORS) — use a preset or KML');}
+}
+$('kmlFile').onchange=async e=>{
+  const f=e.target.files[0]; if(!f)return;
+  try{ const ds=await Cesium.KmlDataSource.load(f,{camera:viewer.scene.camera,canvas:viewer.scene.canvas,clampToGround:true});
+    viewer.dataSources.add(ds); viewer.flyTo(ds); toast('Loaded '+f.name);
+  }catch(err){toast('KML failed: '+err.message);}
+};
+
+function applyCaptureFilter(ctx){
+  const parts=[]; const g=GRADES[S.grade]; if(g)parts.push(g); const a=ATMOS[S.atmos].hue; if(a)parts.push(a);
+  ctx.filter=parts.length?parts.join(' '):'none';
+}
+function capture(){
+  viewer.render();
+  const src=viewer.scene.canvas;
+  const r=ASPECTS[S.delivery], w=src.width, h=src.height, cur=w/h;
+  let cw=w,ch=h,sx=0,sy=0;
+  if(cur>r){cw=h*r;sx=(w-cw)/2;} else {ch=w/r;sy=(h-ch)/2;}
+  const out=document.createElement('canvas'); out.width=Math.round(cw); out.height=Math.round(ch);
+  const ctx=out.getContext('2d'); applyCaptureFilter(ctx);
+  ctx.drawImage(src,sx,sy,cw,ch,0,0,cw,ch);
+  let url; try{ url=out.toDataURL('image/png'); }catch(err){ toast('Capture blocked (tile CORS) — run via local server'); return {id:null,url:null}; }
+  const id='cap'+Date.now();
+  S.captures.push({id,url,spec:buildSpec(id)});
+  addThumb(url,id);
+  const fl=$('captureFlash');fl.style.transition='none';fl.style.opacity=.85;requestAnimationFrame(()=>{fl.style.transition='opacity .5s';fl.style.opacity=0;});
+  toast('Frame captured ('+out.width+'\u00d7'+out.height+')');
+  return {id,url};
+}
+function addThumb(url,id){
+  const t=document.createElement('div');t.className='thumb';
+  t.innerHTML='<img src="'+url+'"><div class="cap">'+S.delivery+'</div>';
+  t.onclick=()=>downloadURI(url,id+'.png');
+  $('thumbs').appendChild(t);
+}
+$('captureBtn').onclick=capture;
+
+function aspectRes(a){const map={'2.39:1':[2048,857],'1.85:1':[1998,1080],'16:9':[1920,1080],'4:3':[1440,1080],'1:1':[1080,1080],'9:16':[1080,1920]};return map[a]||[1920,1080];}
+function buildSpec(refId){
+  const s=S._sun||sunPos(S.target.lat,S.target.lon,localDateTime());
+  return {
+    spec:'gmapz.capture.v1', id:refId||('scout_'+Date.now()), captured_at:new Date().toISOString(),
+    location:{name:$('search').value||'',lng:S.target.lon,lat:S.target.lat,ground_elevation_m:0},
+    camera:{lng:S.target.lon,lat:S.target.lat,altitude_m:S.range,heading_deg:S.head,pitch_deg:S.tilt,roll_deg:0,
+      lens_mm:fovToLens(S.fov),fov_deg:S.fov,sensor:'full-frame',shot_size:S.shotSize,angle:S.angle,move:'static'},
+    light:{date:$('lDate').value,time:$('lTime').value,tz:'UTC',sun_azimuth_deg:+s.az.toFixed(1),sun_elevation_deg:+s.el.toFixed(1),phase:phaseOf(s.el)},
+    look:{style:S.style,grade:S.grade,atmosphere:S.atmos},
+    delivery:{aspect:S.delivery,resolution:aspectRes(S.delivery)},
+    subjects:S.markers.map(m=>({type:m.type.indexOf('person')===0?'person':(m.type==='vehicle'?'prop':m.type),label:m.shotType,lng:m.lon,lat:m.lat,scale:1,height_m:m.height})),
+    scene_description:$('sceneDesc').value, reference_frame:(refId||'scout')+'.png'
+  };
+}
+function basePrompt(){
+  const st=STYLES[S.style], s=S._sun||sunPos(S.target.lat,S.target.lon,localDateTime());
+  const subj=S.markers.length?S.markers.map(m=>m.shotType+' ('+m.type+')').join(', '):'no figures placed';
+  return (S.sceneDesc?S.sceneDesc+'. ':'')+
+   SHOT_SIZES[S.shotSize].label+' shot, '+S.angle+' angle, '+fovToLens(S.fov)+'mm lens. '+
+   'Real location at '+S.target.lat.toFixed(4)+', '+S.target.lon.toFixed(4)+'. '+
+   phaseOf(s.el)+' light, sun elevation '+s.el.toFixed(0)+'\u00b0. '+
+   st.name+' style: '+st.desc+'. '+
+   'Blocking: '+subj+'. '+S.delivery+' framing.';
+}
+function enginePrompt(engine){
+  const b=basePrompt();
+  const tail={runway:' Camera: locked static with subtle parallax. Photoreal, 4s.',kling:' Smooth cinematic motion, high detail, stable camera, 5s.',veo:' Cinematic realism, natural physics, gentle camera drift.',sora:' Filmic, coherent geometry, controlled camera, realistic light transport.',luma:' Dreamlike-real, smooth keyframe motion, cinematic depth.'};
+  return '['+ENGINES[engine]+' start-frame prompt]\n'+b+(tail[engine]||'');
+}
+$('i2vBtn').onclick=()=>{
+  const cap=capture(); if(!cap.url)return;
+  const prompt=enginePrompt(S.engine);
+  showModal('<span class="closex" onclick="document.getElementById(\'modal\').classList.remove(\'show\')">&times;</span>'+
+    '<h3>'+ENGINES[S.engine]+' — start frame + prompt</h3>'+
+    '<div class="mini">PNG downloaded. Copy the prompt into '+ENGINES[S.engine]+', using the frame as the start/reference image.</div>'+
+    '<div class="out" id="promptOut">'+escapeHtml(prompt)+'</div>'+
+    '<div class="row" style="margin-top:10px"><button class="btn y" onclick="navigator.clipboard.writeText(document.getElementById(\'promptOut\').textContent)">Copy prompt</button></div>');
+  downloadURI(cap.url, cap.id+'_'+S.engine+'.png');
+};
+$('specBtn').onclick=()=>{const sp=buildSpec();downloadText(JSON.stringify(sp,null,2),sp.id+'.json');};
+
+function vcs15(){
+  const sp=buildSpec(); const s=sp.light;
+  const forge={project_id:'GMAPZ',clip_id:sp.id,duration_seconds:4,fps:24,resolution:sp.delivery.resolution,
+    world_lock:{location:sp.location,heading_deg:sp.camera.heading_deg,sun_azimuth_deg:s.sun_azimuth_deg,sun_elevation_deg:s.sun_elevation_deg},
+    characters:S.markers.filter(m=>m.type.indexOf('person')===0).map(m=>({label:m.shotType,planned:true})),
+    props:S.markers.filter(m=>m.type.indexOf('person')!==0).map(m=>({label:m.shotType,type:m.type})),
+    shot_timeline:[{t:0,event:sp.camera.shot_size+' / '+sp.camera.angle}],
+    speaker_attribution:'UNKNOWN',camera_continuity:sp.camera,style_lock:sp.look,continuity_handoff:'authoritative_previs'};
+  return [
+   '# VCS-15 HANDOFF — '+sp.id,'',
+   '## VCS-OBS','PLANNED. '+(sp.scene_description||'(scene)'),'Location '+sp.location.lat+', '+sp.location.lng+' · '+s.phase+' light.','',
+   '## VCS-SAL','UNKNOWN at pre-vis — no speaker attribution asserted.','',
+   '## VCS-CPAS','Shot '+sp.camera.shot_size+' · angle '+sp.camera.angle+' · '+sp.camera.lens_mm+'mm ('+sp.camera.fov_deg+'\u00b0) · heading '+sp.camera.heading_deg+'\u00b0 · tilt '+sp.camera.pitch_deg+'\u00b0','',
+   '## VCS-STYLE','Style '+sp.look.style+' · grade '+sp.look.grade+' · atmosphere '+sp.look.atmosphere+' · delivery '+sp.delivery.aspect,'',
+   '## VCS-FORGE','```json',JSON.stringify(forge,null,2),'```','',
+   '## VCS-MATCH','frame '+sp.reference_frame+' · sun az '+s.sun_azimuth_deg+'\u00b0 el '+s.sun_elevation_deg+'\u00b0 · lens '+sp.camera.lens_mm+'mm','',
+   '## VCS-NEXT','Suggested coverage: reverse, insert, '+(sp.camera.shot_size==='wide'?'push to medium':'pull to wide')+'.','',
+   '## CONTINUITY RISKS','Sun moves with time-of-day; lock the captured frame. Photoreal tile LOD varies by altitude.'
+  ].join('\n');
+}
+$('vcsBtn').onclick=()=>{const sp=buildSpec();downloadText(vcs15(),sp.id+'_vcs15.md');};
+
+function vco(){
+  const sp=buildSpec();
+  const tags={}; S.markers.forEach((m,i)=>{const isP=m.type.indexOf('person')===0;tags['@'+(isP?'image':m.type)+(i+1)]={type:isP?'image':m.type,displayName:m.shotType,description:m.type+' at '+m.lat.toFixed(4)+','+m.lon.toFixed(4),vcsLocked:true,veoRef:null};});
+  tags['@location_scout']={type:'location',displayName:sp.location.name||'scout',description:'Real geo '+sp.location.lat+','+sp.location.lng,vcsLocked:true,veoRef:sp.reference_frame};
+  return {project:{
+    brief:sp.scene_description||('Scouted '+sp.camera.shot_size+' at '+sp.location.lat.toFixed(3)+','+sp.location.lng.toFixed(3)),
+    bible:{visual_language:{palette:STYLES[S.style].name,forbidden_drift:'no neon cyberpunk, no glossy futurism',lighting_rules:sp.light.phase+' light, sun el '+sp.light.sun_elevation_deg+'\u00b0'}},
+    characters:S.markers.filter(m=>m.type.indexOf('person')===0).map(m=>({name:m.shotType,stub:true})),
+    shots:[{id:sp.id,scene:1,shot_type:sp.camera.shot_size,duration:4,description:basePrompt(),camera:sp.camera,lighting:sp.light}],
+    script:null,storyboard:null,score:null,tags
+  }};
+}
+$('vcoBtn').onclick=()=>{const sp=buildSpec();downloadText(JSON.stringify(vco(),null,2),sp.id+'_vco.json');};
+
+$('saveShot').onclick=saveShot;
+function saveShot(){
+  const name=$('shotName').value.trim()||('Shot '+(S.shots.length+1));
+  const cap=capture();
+  S.shots.push({name,spec:buildSpec(cap.id||undefined),thumb:cap.url}); $('shotName').value=''; renderShots(); toast('Saved: '+name);
+}
+function renderShots(){
+  const L=$('shotList');L.innerHTML='';
+  S.shots.forEach((sh,i)=>{const d=document.createElement('div');d.className='item';
+    d.innerHTML='<div class="t"><span>'+(i+1)+'. '+escapeHtml(sh.name)+' <span class="tag">'+sh.spec.camera.shot_size+'</span></span><span class="x" data-i="'+i+'">&times;</span></div>';
+    d.querySelector('.x').onclick=()=>{S.shots.splice(i,1);renderShots();};
+    L.appendChild(d);});
+}
+$('scenePrompt').onclick=()=>{
+  if(!S.shots.length){toast('Save a shot first');return;}
+  const lines=S.shots.map((sh,i)=>'SHOT '+(i+1)+' — '+sh.name+'\n'+sh.spec.camera.shot_size+' / '+sh.spec.camera.angle+' / '+sh.spec.camera.lens_mm+'mm / '+sh.spec.light.phase+'\n'+(sh.spec.scene_description||'')+'\n');
+  const full='FULL SCENE — '+STYLES[S.style].name+' style\n'+STYLES[S.style].desc+'\n\n'+lines.join('\n');
+  showModal('<span class="closex" onclick="document.getElementById(\'modal\').classList.remove(\'show\')">&times;</span><h3>Full scene prompt</h3><div class="out" id="scenePromptOut">'+escapeHtml(full)+'</div><div class="row" style="margin-top:10px"><button class="btn y" onclick="navigator.clipboard.writeText(document.getElementById(\'scenePromptOut\').textContent)">Copy</button></div>');
+};
+
+$('sessionSave').onclick=()=>{
+  const data={v:1,state:{shotSize:S.shotSize,angle:S.angle,fov:S.fov,target:S.target,head:S.head,tilt:S.tilt,range:S.range,style:S.style,grade:S.grade,atmos:S.atmos,delivery:S.delivery,sceneDesc:$('sceneDesc').value,date:$('lDate').value,time:$('lTime').value},markers:S.markers,shots:S.shots.map(s=>({name:s.name,spec:s.spec}))};
+  downloadText(JSON.stringify(data,null,2),'gmapz_session_'+Date.now()+'.json');
+};
+$('sessionLoadBtn').onclick=()=>$('sessionFile').click();
+$('sessionFile').onchange=e=>{const f=e.target.files[0];if(!f)return;const rd=new FileReader();rd.onload=()=>{try{
+  const d=JSON.parse(rd.result),st=d.state||{};
+  Object.assign(S,{shotSize:st.shotSize||S.shotSize,angle:st.angle||S.angle,fov:st.fov||S.fov,target:st.target||S.target,head:st.head==null?S.head:st.head,tilt:st.tilt==null?S.tilt:st.tilt,range:st.range||S.range,style:st.style||S.style,grade:st.grade||S.grade,atmos:st.atmos||S.atmos,delivery:st.delivery||S.delivery});
+  $('sceneDesc').value=st.sceneDesc||'';$('lDate').value=st.date||'';$('lTime').value=st.time||'';
+  S.markers.forEach(m=>viewer.entities.removeById(m.id));S.markers=[];
+  (d.markers||[]).forEach(m=>addMarker(m.lon,m.lat,m.height,m.type,m.shotType));
+  S.shots=(d.shots||[]); renderShots(); applyMask();applyAtmos();applyGrade();flyToParams();syncCamUI();updateSun();
+  toast('Session loaded');
+}catch(err){toast('Bad session file');}};rd.readAsText(f);};
+
+function setStat(h,c){const l=$('loadstat');l.innerHTML=h;if(c)l.style.color=c;}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),2200);}
+function downloadText(txt,name){downloadURI('data:text/plain;charset=utf-8,'+encodeURIComponent(txt),name);}
+function downloadURI(uri,name){const a=document.createElement('a');a.href=uri;a.download=name;document.body.appendChild(a);a.click();a.remove();}
+function escapeHtml(s){return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function showModal(html){$('modalCard').innerHTML=html;$('modal').classList.add('show');}
+$('modal').onclick=e=>{if(e.target.id==='modal')$('modal').classList.remove('show');};
+$('helpBtn').onclick=showHelp;
+function showHelp(){showModal('<span class="closex" onclick="document.getElementById(\'modal\').classList.remove(\'show\')">&times;</span><h3>Keyboard &amp; workflow</h3><table>'+
+ '<tr><td><span class="k">G</span></td><td>Get current camera into the params panel</td></tr>'+
+ '<tr><td><span class="k">F</span></td><td>Fly to the exact params</td></tr>'+
+ '<tr><td><span class="k">C</span></td><td>Capture the rendered frame (crops to delivery aspect, bakes grade)</td></tr>'+
+ '<tr><td><span class="k">S</span></td><td>Save current setup as a shot in the sequence</td></tr>'+
+ '<tr><td><span class="k">R</span></td><td>Reset view to the target</td></tr>'+
+ '<tr><td><span class="k">L</span></td><td>Open the KML/KMZ loader</td></tr>'+
+ '<tr><td><span class="k">?</span></td><td>This help</td></tr>'+
+ '<tr><td><span class="k">Alt+scroll</span></td><td>Raise/lower the selected marker</td></tr>'+
+ '</table><div class="mini" style="margin-top:12px">Loop: Scout a place → Block the camera → Lock the sun → place Cast → Capture → Export the spec + start frame. The captured frame + spec are the product.</div>');}
+
+document.addEventListener('keydown',e=>{
+  if(['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
+  const k=e.key.toLowerCase();
+  if(k==='g'){getCurrent();} else if(k==='f'){flyToParams();} else if(k==='c'){capture();}
+  else if(k==='s'){saveShot();} else if(k==='r'){flyToParams();} else if(k==='l'){$('kmlFile').click();}
+  else if(e.key==='?'){showHelp();}
+});
+
+(function initDefaults(){
+  const now=new Date();
+  $('lDate').value=now.toISOString().slice(0,10);
+  $('lTime').value='23:30';
+  S.range=SHOT_SIZES[S.shotSize].r; S.tilt=ANGLES[S.angle]; S.fov=lensToFov(S.lensMm);
+  applyMask(); applyAtmos(); applyGrade(); updateSun();
+  flyToParams(0); syncCamUI();
+  setTimeout(applyMask,400);
+})();
+
+window.gmapz={S,viewer,Cesium,capture,buildSpec};
+}
+if(typeof Cesium!=='undefined'){boot();} else {window.__bootGmapz=boot;}
+</script>
+</body>
+</html>
