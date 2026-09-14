@@ -1185,11 +1185,34 @@ $("#exportBtn").onclick=()=>{
       ${nOf(all().length,"row")}.</p>
      <textarea id="exportBox" rows="9" readonly style="font-family:ui-monospace,monospace;font-size:11px">${esc(csv.slice(0,4000))}${csv.length>4000?"\n… (full file downloads)":""}</textarea>`,
     [["Close","",closeModal],["Copy to clipboard","",()=>{navigator.clipboard.writeText(csv).then(()=>toast("Copied"),()=>toast("Couldn't copy — select the text and copy manually"));}],
-     ["Download CSV","pri",()=>{
-       const blob=new Blob([csv],{type:"text/csv"});const url=URL.createObjectURL(blob);
-       const a=document.createElement("a");a.href=url;a.download=`heirbud_export_${today()}.csv`;
-       document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-       closeModal();toast("Downloaded");}]]);};
+     ["Download CSV","pri",()=>saveFile(`heirbud_export_${today()}.csv`,csv)]]);};
+/* Saving a file works differently depending on where this page is running.
+   Opened from your own machine, a plain download link is fine. Opened as a
+   hosted page, the viewer sandbox ignores page-initiated downloads entirely —
+   the link would look like it worked and silently do nothing — so the platform
+   has to mediate the save. Try that first, fall back to the link, and if
+   neither is available say so instead of failing quietly. */
+async function saveFile(filename,text){
+  const hosted=!!(window.claude&&typeof window.claude.use==="function");
+  if(hosted){
+    try{
+      const downloads=await window.claude.use("downloads");
+      if(downloads){
+        await downloads.save({filename,data:text});
+        closeModal();toast("Saved");return;}
+    }catch(e){
+      if(e&&e.code==="declined"){toast("Save cancelled");return;}
+      // anything else: fall through and try the ordinary link
+    }
+  }
+  try{
+    const url=URL.createObjectURL(new Blob([text],{type:"text/csv"}));
+    const a=document.createElement("a");a.href=url;a.download=filename;
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),1000);
+    if(hosted){toast("If nothing downloaded, use Copy to clipboard instead",4200);return;}
+    closeModal();toast("Downloaded");
+  }catch(e){toast("Couldn't save the file — use Copy to clipboard instead",4200);}}
 
 /* ═══ WIRING ════════════════════════════════════════════════════════════════ */
 $("#tabs").querySelectorAll("button").forEach(b=>b.onclick=()=>goTab(b.dataset.tab));
