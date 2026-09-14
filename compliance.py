@@ -140,6 +140,61 @@ def check_eligibility(custody_date, as_of: Optional[date] = None) -> Eligibility
     )
 
 
+# Outreach states. Two states ("eligible" / "not eligible") throw away a real
+# distinction and leave an imported list looking entirely dead on arrival.
+VERIFIED = "VERIFIED"        # a human checked the state record and wrote down what they saw
+PRESUMED = "PRESUMED"        # the file's own report date is 24+ months old
+TOO_RECENT = "TOO_RECENT"    # a date we have, but inside the 24-month window
+UNKNOWN = "UNKNOWN"          # no usable date at all
+SUPPRESSED = "SUPPRESSED"    # opted out — terminal
+
+
+def eligibility_state(prospect: dict, as_of: Optional[date] = None) -> tuple[str, str]:
+    """Classify a record for OUTREACH, returning ``(state, human reason)``.
+
+    This is deliberately softer than :func:`assert_agreement_allowed`, and the
+    two are not interchangeable:
+
+    * Telling somebody the state is holding their money is lawful and kind
+      whatever the custody clock says, so PRESUMED is enough to write a
+      no-contract letter.
+    * Signing a fee agreement is not. Holders remit when they report, so a
+      report date is strong evidence — but it is evidence about a spreadsheet,
+      not the state's record. Only VERIFIED unlocks an agreement, and
+      ``assert_agreement_allowed`` remains the only gate that matters there.
+    """
+    as_of = as_of or date.today()
+    if str(prospect.get("suppression_status") or "").upper() == SUPPRESSED:
+        return SUPPRESSED, "Opted out — never contact again."
+    custody = prospect.get("custody_date")
+    if prospect.get("eligibility_reviewed") and custody:
+        elig = check_eligibility(custody, as_of=as_of)
+        if elig.eligible:
+            return VERIFIED, f"Confirmed — {elig.custody_months} months in state custody."
+        return TOO_RECENT, (f"Confirmed, but only {elig.custody_months} months in custody — "
+                            f"an agreement now would be void.")
+    source = custody or prospect.get("report_date") or prospect.get("report_year")
+    if not source:
+        return UNKNOWN, "No usable report date — look it up before contacting."
+    d = _coerce_date(source)
+    if d is None:
+        return UNKNOWN, f"Couldn't read the date {source!r}."
+    months = _months_between(d, as_of)
+    if months < CUSTODY_MONTHS_REQUIRED:
+        return TOO_RECENT, f"Reported {months} months ago — under {CUSTODY_MONTHS_REQUIRED}, so no contract yet."
+    return PRESUMED, (f"Reported {months} months ago — presumed eligible; "
+                      f"confirm on the state record to unlock an agreement.")
+
+
+def may_send_letter(prospect: dict, mode: str, as_of: Optional[date] = None) -> bool:
+    """Can this letter go out? GRATUITY needs only an un-suppressed record;
+    CONTRACT needs a verified custody date, because it offers an agreement."""
+    state, _ = eligibility_state(prospect, as_of=as_of)
+    if state == SUPPRESSED:
+        return False
+    return state == VERIFIED if str(mode).upper() == "CONTRACT" else True
+
+
 class EligibilityError(Exception):
     """Raised when an agreement is requested for an ineligible record."""
 

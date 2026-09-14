@@ -66,3 +66,60 @@ def test_disclosure_names_the_free_state_path_and_denies_gov_identity():
     assert "no cost" in d or "free" in d
     assert compliance.STATE_PORTAL in compliance.FREE_CLAIM_DISCLOSURE
     assert "not the state" in d
+
+
+# ── Outreach states: softer than the agreement gate, and never a substitute ──
+def test_presumed_from_report_date_when_not_yet_verified():
+    state, why = compliance.eligibility_state({"report_date": "2019-01-01"})
+    assert state == compliance.PRESUMED
+    assert "confirm" in why.lower()
+
+
+def test_presumed_never_unlocks_an_agreement():
+    import pytest
+    p = {"report_date": "2019-01-01"}
+    assert compliance.eligibility_state(p)[0] == compliance.PRESUMED
+    with pytest.raises(compliance.EligibilityError):
+        compliance.assert_agreement_allowed(p)
+
+
+def test_verified_requires_both_review_and_a_date():
+    assert compliance.eligibility_state(
+        {"custody_date": "2000-01-01", "eligibility_reviewed": True})[0] == compliance.VERIFIED
+    # reviewed flag alone, with no date, is not verification
+    assert compliance.eligibility_state({"eligibility_reviewed": True})[0] == compliance.UNKNOWN
+
+
+def test_recent_report_date_is_too_recent_not_presumed():
+    from datetime import date
+    assert compliance.eligibility_state(
+        {"report_date": "2025-01-01"}, as_of=date(2026, 1, 1))[0] == compliance.TOO_RECENT
+
+
+def test_unreadable_and_missing_dates_are_unknown():
+    assert compliance.eligibility_state({})[0] == compliance.UNKNOWN
+    assert compliance.eligibility_state({"report_date": "sometime in the 90s"})[0] == compliance.UNKNOWN
+
+
+def test_suppression_beats_every_other_state():
+    p = {"custody_date": "2000-01-01", "eligibility_reviewed": True,
+         "suppression_status": "SUPPRESSED"}
+    assert compliance.eligibility_state(p)[0] == compliance.SUPPRESSED
+    assert compliance.may_send_letter(p, "GRATUITY") is False
+    assert compliance.may_send_letter(p, "CONTRACT") is False
+
+
+def test_gratuity_may_send_on_presumed_but_contract_may_not():
+    p = {"report_date": "2019-01-01"}
+    assert compliance.may_send_letter(p, "GRATUITY") is True
+    assert compliance.may_send_letter(p, "CONTRACT") is False
+
+
+def test_contract_may_send_once_verified():
+    p = {"custody_date": "2000-01-01", "eligibility_reviewed": True}
+    assert compliance.may_send_letter(p, "CONTRACT") is True
+
+
+def test_gratuity_may_send_even_with_no_date_at_all():
+    # Telling someone their money exists is lawful whatever the custody clock says.
+    assert compliance.may_send_letter({}, "GRATUITY") is True

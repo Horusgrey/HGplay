@@ -17,7 +17,7 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 
 | File | What it is |
 |------|-----------|
-| `heirbud_command_center.html` | **⭐ The one you actually run.** The whole engine as a single browser file — no Python, no server, no install. Open it, import your CSV, and everything (ranking, households, custody gate, letters, invoices, collections) runs on your own machine. Data stays in the browser and never leaves the device. |
+| `heirbud_command_center.html` | **⭐ The one you actually run.** The whole engine as a single browser file — no Python, no server, no install. Import any CSV (it maps your column names for you), and eligibility, ranking, households, letters, invoices and collections all populate on their own. Your details fill every document — nothing prints with a placeholder. Data stays in the browser and never leaves the device. |
 | `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prioritized prospect table, funnel analytics. Theme-aware. |
 | `owner_portal.html` | **Owner-facing trust page** — served at `/verify?id=…`. Owners verify their own record, see the free state path front-and-center, opt in or opt out. |
 | `heirfinder_v1.html` | Standalone single-file tool — AI enrichment, outreach emails, localStorage. No server. |

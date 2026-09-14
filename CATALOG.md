@@ -30,13 +30,13 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
 | `demo_pilot.py` | **One-command end-to-end pilot** on synthetic data — proves every gate |
 | `fixtures/synthetic_wi_records.csv` | 31 fake WI records (incl. a multi-claim person, a family with an estate, and an institutional claimant) |
-| `tests/` | 133 pytest cases locking every compliance gate and the household graph |
+| `tests/` | 142 pytest cases locking every compliance gate and the household graph |
 | `requirements.txt` | Python deps |
 
 ### Frontends
 | File | Purpose |
 |------|---------|
-| `heirbud_command_center.html` | **⭐ Standalone browser app** — the full engine client-side: import, rank, households, verify, letters, invoices, collections. localStorage only; nothing leaves the device |
+| `heirbud_command_center.html` | **⭐ Standalone browser app** — CSV column mapper, auto-eligibility, ranking, households, operator identity, batch letter printing, invoices, CSV export. localStorage only; nothing leaves the device |
 | `heirbud_console.html` | **Operator console** — served at `/`, pipeline/worklist/outbox/actions/analytics/priority |
 | `owner_portal.html` | **Owner trust page** — served at `/verify`, proof-first self-service |
 | `heirfinder_v1.html` | Standalone tool (localStorage, AI enrichment) |
