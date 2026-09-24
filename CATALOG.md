@@ -17,7 +17,7 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `process_wisconsin_data.py` | WI export cleaner + priority scoring |
 | `outreach_generator.py` | Honest, capped call/email/SMS scripts (suppression-aware) |
 | `contract_generator.py` | Agreement PDFs — refuses to render unless eligible |
-| `followup_engine.py` | Daily prioritized action queue (autonomy layer) |
+| `followup_engine.py` | Daily action queue + the finite follow-up rules (one nudge at 21 days, then stop) |
 | `verification_queue.py` | Custody-date verification worklist — prioritized, evidence-tracked |
 | `analytics.py` | Funnel, value ladder (published/eligible/expected/realized), cycle times, narrative |
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barriers, findability, segment/track/mode |
@@ -30,7 +30,7 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
 | `demo_pilot.py` | **One-command end-to-end pilot** on synthetic data — proves every gate |
 | `fixtures/synthetic_wi_records.csv` | 31 fake WI records (incl. a multi-claim person, a family with an estate, and an institutional claimant) |
-| `tests/` | 142 pytest cases locking every compliance gate and the household graph |
+| `tests/` | 154 pytest cases locking every compliance gate and the household graph |
 | `requirements.txt` | Python deps |
 
 ### Frontends

@@ -47,7 +47,7 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `process_wisconsin_data.py` | WI export cleaner + priority scoring |
 | `outreach_generator.py` | Honest, capped call/email/SMS scripts by holder type (suppression-aware) |
 | `contract_generator.py` | One-page agreement PDFs — refuses to render unless eligible (reportlab) |
-| `followup_engine.py` | Daily prioritized action queue — run every morning |
+| `followup_engine.py` | Daily action queue + finite follow-up cadence — one nudge at 21 days, then never again |
 | `verification_queue.py` | Custody-date verification worklist — record eligibility with evidence |
 | `analytics.py` | Funnel + value ladder + cycle times + plain-English narrative |
 | `scoring.py` | Achievable-first prioritization — sweet-spot value, barrier model, findability, segment + track + mode |

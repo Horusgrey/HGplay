@@ -83,6 +83,32 @@ another person's money.
 
 ---
 
+## Follow-ups — one nudge, then you stop
+
+The app remembers when every letter went out. Three weeks later, anyone who
+hasn't replied appears under **Follow-ups due** on the Start here tab. Print them
+in one batch, same as the first time.
+
+Three rules, enforced by the software rather than your memory:
+
+- **Exactly one follow-up.** After the second letter that person never appears in
+  the queue again.
+- **A reply ends it.** The moment you move someone past CONTACTED, no chaser is
+  ever generated for them.
+- **The second letter says it's the last one.** In those words. It also says you
+  won't pass their name on, and apologises for the intrusion if it was one.
+
+That last point is the whole difference between a reminder and being pestered,
+and it's the reason someone who ignored the first letter might trust the second.
+
+### Notes
+
+The **📝** button on any lead keeps a dated log — who answered, what they said,
+when to try again. It shows the letter dates too, so the third call isn't
+accidentally your first conversation. Notes are included in the CSV export.
+
+---
+
 ## Daily rhythm
 
 1. **Start here** — work the plan top to bottom.

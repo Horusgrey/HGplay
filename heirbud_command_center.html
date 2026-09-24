@@ -141,6 +141,8 @@
     <div class="card"><h2>Your setup</h2><div class="body" style="max-height:none" id="setupSteps"></div></div>
     <div class="card"><h2>Today's plan — highest value per envelope first <span class="c" id="planCount">0</span></h2>
       <div class="body" style="max-height:none" id="plan"></div></div>
+    <div class="card"><h2>Follow-ups due — second and final letter <span class="c" id="fuCount">0</span></h2>
+      <div class="body" id="followups"></div></div>
     <div class="card"><h2>Your best first moves <span class="c" id="bestCount">0</span></h2>
       <div class="body" id="bestMoves"></div></div>
   </div>
@@ -284,6 +286,33 @@ function elig(p){
   if(m<CUSTODY_MONTHS)return{state:"TOO_RECENT",ok:false,why:`Reported ${m} months ago — under 24, so no contract yet`};
   return{state:"PRESUMED",ok:false,why:`Reported ${m} months ago — presumed eligible, confirm to unlock a contract`};}
 const canContract=p=>elig(p).state==="VERIFIED";
+
+/* ── FOLLOW-UP ───────────────────────────────────────────────────────────────
+   A letter you can't remember sending is a letter you'll send twice. The app
+   records when each letter went out, offers exactly ONE nudge three weeks
+   later, and then stops for good. Two letters is a reminder; three is
+   pestering, and the second letter says out loud that it's the last one — a
+   promise the code keeps whether or not you remember making it. */
+const FOLLOWUP_DAYS=21, MAX_LETTERS=2;
+function daysSince(d){if(!d)return null;const t=parseDateish(d);if(!t)return null;
+  return Math.floor((Date.now()-t.getTime())/86400000);}
+function followUpDue(p){
+  if(!canWrite(p))return false;
+  if(p.stage!=="CONTACTED")return false;                 // they replied — stop writing
+  if((p.mailed_count||0)>=MAX_LETTERS)return false;      // already had their nudge
+  const d=daysSince(p.mailed_on);
+  return d!==null&&d>=FOLLOWUP_DAYS;}
+const followUpsDue=()=>all().filter(followUpDue)
+  .sort((a,b)=>(daysSince(b.mailed_on)||0)-(daysSince(a.mailed_on)||0));
+function markLetterSent(pid,kind){
+  const p=DB.prospects[pid];if(!p)return;
+  if(kind==="FOLLOWUP"){p.followup_on=today();p.mailed_count=(p.mailed_count||1)+1;}
+  else{p.mailed_on=p.mailed_on||today();p.mailed_count=Math.max(1,p.mailed_count||0);}
+  if(["IDENTIFIED","ENRICHED"].includes(p.stage))setStage(pid,"CONTACTED");}
+function addNote(pid,text){
+  const p=DB.prospects[pid];if(!p||!text.trim())return;
+  p.notes=p.notes||[];p.notes.unshift({at:new Date().toISOString(),text:text.trim()});
+  save();}
 const canWrite=p=>p.suppression_status!=="SUPPRESSED";   // telling someone about their money is always fine
 function feeAmt(a){return Math.round((Number(a)||0)*FEE*100)/100;}
 
@@ -588,7 +617,7 @@ let TAB="start",PAGE=0,PER=100;
 const TABS=["start","leads","house","verify","money","collect"];
 function goTab(t){TAB=t;$("#tabs").querySelectorAll("button").forEach(b=>b.classList.toggle("on",b.dataset.tab===t));
   TABS.forEach(x=>$("#tab-"+x).classList.toggle("hide",x!==t));window.scrollTo(0,0);}
-function render(){buildGraph();renderSetup();renderKpis();renderStart();renderLeads();renderHouse();renderVerify();renderMoney();renderCollect();renderFilters();}
+function render(){buildGraph();renderSetup();renderKpis();renderStart();renderFollowups();renderLeads();renderHouse();renderVerify();renderMoney();renderCollect();renderFilters();}
 
 function renderSetup(){
   const ps=all();
@@ -654,6 +683,10 @@ function renderStart(){
   if(single.length)plan.push(["📮",`${nOf(single.length,"letter","letters")} ready to print`,
     `Eligible, one claim each, nothing standing in the way. ${fmt(single.reduce((a,p)=>a+(+p.amount||0),0))} of property.`,
     single.length>1?"Print a batch":"Print it",()=>batchDlg()]);
+  const fuDue=followUpsDue();
+  if(fuDue.length)plan.push(["📬",`${nOf(fuDue.length,"follow-up")} due`,
+    `Written to ${FOLLOWUP_DAYS}+ days ago with no reply. One more letter each, then they're left alone for good.`,
+    fuDue.length>1?"Print them all":"Print it",()=>batchFollowUp()]);
   if(needLookup.length)plan.push(["🔎",`${nOf(needLookup.length,"claim needs","claims need")} a date`,
     `No usable report date in your file, so I can't work out eligibility. One lookup on the state site fixes ${plur(needLookup.length,"it","each")}.`,
     "Open the list",()=>goTab("verify")]);
@@ -692,6 +725,29 @@ function renderStart(){
     :'<div class="empty">Nothing workable yet. Import your list, or check the Verify tab if everything needs a date.</div>';
 }
 
+function renderFollowups(){
+  const due=followUpsDue();
+  $("#fuCount").textContent=n0(due.length);
+  const waiting=all().filter(p=>canWrite(p)&&p.stage==="CONTACTED"&&(p.mailed_count||0)<MAX_LETTERS
+    &&daysSince(p.mailed_on)!==null&&daysSince(p.mailed_on)<FOLLOWUP_DAYS);
+  const done=all().filter(p=>(p.mailed_count||0)>=MAX_LETTERS&&p.stage==="CONTACTED");
+  let h="";
+  if(due.length){
+    h+=`<div class="btns" style="margin:6px 0 12px"><button class="btn pri" onclick="batchFollowUp()">Print all ${n0(due.length)} follow-ups</button></div>`;
+    h+=due.slice(0,40).map(p=>`<div class="row">
+      <div class="nm">${esc(p.name)} <span class="amt" style="float:right">${fmt(p.amount)}</span></div>
+      <div class="meta">First letter ${daysSince(p.mailed_on)} days ago · no reply yet${p.notes&&p.notes.length?` · ${nOf(p.notes.length,"note")}`:""}</div>
+      <div class="btns" style="margin-top:5px">
+        <button class="btn pri" onclick="followUpDlg('${p.property_id}')">Follow-up letter</button>
+        <button class="btn" onclick="noteDlg('${p.property_id}')">📝 Note</button>
+        <button class="btn danger" onclick="suppress('${p.property_id}')">Stop writing</button></div></div>`).join("");
+  }
+  const tail=[];
+  if(waiting.length)tail.push(`${nOf(waiting.length,"letter")} still inside the ${FOLLOWUP_DAYS}-day window.`);
+  if(done.length)tail.push(`${nOf(done.length,"person","people")} had both letters — no further contact, as promised.`);
+  if(tail.length)h+=`<div class="meta" style="margin-top:${due.length?"12px":"4px"}">${tail.join(" ")}</div>`;
+  $("#followups").innerHTML=h||'<div class="empty">Nothing to chase. Follow-ups appear '+FOLLOWUP_DAYS+' days after a letter goes out, once each.</div>';}
+
 /* ── Leads ── */
 const STAGES=["IDENTIFIED","ENRICHED","CONTACTED","RESPONDED","AGREEMENT_SENT","SIGNED","FILED","PAID","CLOSED","SUPPRESSED"];
 const ESTATE_PILL={VERIFIED:["ok","verified ✓"],PRESUMED:["info","presumed"],TOO_RECENT:["danger","too recent"],UNKNOWN:["warn","no date"],SUPPRESSED:["danger","suppressed"]};
@@ -718,7 +774,8 @@ function renderLeads(){
         <div class="meta" style="font-size:11px">${esc([p.holder,p.city,s.segment].filter(Boolean).join(" · "))}</div></td>
       <td class="amt">${fmt(p.amount)}</td>
       <td><div class="amt">${s.score.toFixed(0)} <span style="font-weight:400;color:var(--faint);font-size:11px">· ${fmt(s.expected_fee)}</span></div><span class="pill ${TRACKCLS[s.track]||'dim'}">${s.track}</span></td>
-      <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span></td>
+      <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span>
+        ${p.mailed_on?`<div class="meta" style="font-size:10.5px">${p.mailed_count>1?"2 sent":"mailed"} ${daysSince(p.mailed_on)}d ago</div>`:""}</td>
       <td>${eligPill(p)}</td>
       <td>${p.phone||p.email?esc(p.phone||p.email):`<span class="pill ${s.findability>=70?'ok':s.findability>=45?'warn':'danger'}">findable ${s.findability}</span>`}</td>
       <td><div class="btns">
@@ -727,6 +784,8 @@ function renderLeads(){
         <button class="btn" onclick="toggleMode('${p.property_id}')" ${supp?'disabled':''} title="${s.mode==='GRATUITY'?'Gratuity — no contract':'Contract — 10%'}">${s.mode==='GRATUITY'?'🤝':'📄'}</button>
         <button class="btn" onclick="letterDlg('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
         <button class="btn" onclick="stageDlg('${p.property_id}')" ${supp?'disabled':''}>Stage</button>
+        <button class="btn" onclick="noteDlg('${p.property_id}')" title="Notes and call log">📝${p.notes&&p.notes.length?p.notes.length:""}</button>
+        ${followUpDue(p)?`<button class="btn pri" onclick="followUpDlg('${p.property_id}')">Follow up</button>`:""}
         ${['SIGNED','FILED','PAID','CLOSED'].includes(p.stage)&&!p.fee_paid?`<button class="btn pri" onclick="collectDlg('${p.property_id}')">💵</button>`:''}
         <button class="btn danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Stop</button>
       </div></td></tr>`;}).join("")
@@ -1007,7 +1066,7 @@ function letterOne(pid){
      <div style="max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
     [["Close","",closeModal],["Open printable letter","pri",()=>{
       openPrintable("Letter — "+p.name,html);
-      if(["IDENTIFIED","ENRICHED"].includes(DB.prospects[pid].stage))setStage(pid,"CONTACTED");
+      markLetterSent(pid,"FIRST");
       render();closeModal();}]]);}
 
 window.combinedLetter=key=>requireSettings(()=>{
@@ -1040,7 +1099,7 @@ window.combinedLetter=key=>requireSettings(()=>{
      <div style="max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
     [["Close","",closeModal],["Open printable letter","pri",()=>{
       openPrintable("Letter — "+p.name,html);
-      ms.forEach(m=>{if(["IDENTIFIED","ENRICHED"].includes(m.stage))setStage(m.property_id,"CONTACTED");});
+      ms.forEach(m=>markLetterSent(m.property_id,"FIRST"));
       render();closeModal();}]]);});
 
 /* ── Batch printing: the actual bottleneck on a real list ── */
@@ -1105,7 +1164,7 @@ function buildBatch(n,forceGrat){
     <b>${nOf(count,"letter")}</b> — ${combined} combined, ${count-combined} single · ${contract} contract, ${gratuity} gratuity.
     Each starts on its own page. Addresses are in the block under the letterhead, so a window envelope works.</div>`;
   openPrintable(`HeirBud batch — ${count} letters`,header+pages.join(""));
-  touched.forEach(pid=>{if(["IDENTIFIED","ENRICHED"].includes(DB.prospects[pid].stage))setStage(pid,"CONTACTED");});
+  touched.forEach(pid=>markLetterSent(pid,"FIRST"));
   save();render();
   toast(`${nOf(count,"letter")} built — print, fold, mail`);
 }
@@ -1137,6 +1196,57 @@ window.heirScript=pid=>requireSettings(()=>{
     `<div style="max-height:360px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
     [["Close","",closeModal],["Open printable script","pri",()=>{openPrintable("Heir script — "+d.name,html);closeModal();}]]);});
 
+/* The second and final letter. Shorter, warmer, no pressure, and it says so. */
+function followUpHTML(p){
+  const {first}=nameParts(p);
+  const wks=Math.max(2,Math.round((daysSince(p.mailed_on)||21)/7));
+  const holder=p.holder?` from ${esc(p.holder)}`:"";
+  const mode=modeOf(p);
+  const feeLine=(mode==="CONTRACT"&&canContract(p))
+    ?`<p>My offer stands if you want it: I handle the paperwork for 10% — Wisconsin's legal maximum — agreed in writing first and owed only if you actually get paid. On ${fmt(p.amount)} that's about ${fmt(feeAmt(p.amount))}. Nothing upfront, and nothing at all if the claim fails.</p>`
+    :`<p>If the paperwork looks like a hassle, I'm still glad to walk you through it at no cost.</p>`;
+  const open=isOrg(p)
+    ?`<p>To whom it may concern,</p><p>I wrote about ${wks} weeks ago: the State of Wisconsin is holding roughly <b>${fmt(p.amount)}</b> in the name of ${esc(p.name)}${holder}.</p>`
+    :`<p>Dear ${esc(first)},</p><p>I wrote to you about ${wks} weeks ago — the State of Wisconsin is holding roughly <b>${fmt(p.amount)}</b> in your name${holder}.</p>`;
+  return `<div class="page">${letterhead()}${addrBlock(p)}
+    ${open}
+    <p>An unexpected letter is easy to set aside, so this is just a nudge. The money doesn't expire and it stays yours either way. You can claim it yourself, free, at ${PORTAL} or by calling ${STATE_PHONE}.</p>
+    ${feeLine}
+    <p><b>This is the last letter I'll send.</b> I won't keep writing, and I won't pass your name on to anyone. If I've bothered you, I'm sorry — and I hope you get your money regardless.</p>
+    <p>Warmly,<br>${sig()}</p>
+    <div class="foot">${DISCLOSURE()}</div></div>`;}
+
+window.followUpDlg=pid=>requireSettings(()=>{
+  const p=DB.prospects[pid];const html=followUpHTML(p);
+  modal("Follow-up letter — "+p.name,
+    `<p class="meta">Second and final letter, ${daysSince(p.mailed_on)} days after the first. After this one, ${esc(nameParts(p).first)} drops off the follow-up list for good.</p>
+     <div style="max-height:320px;overflow:auto;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--surface2)">${html}</div>`,
+    [["Close","",closeModal],["Open printable letter","pri",()=>{
+      openPrintable("Follow-up — "+p.name,html);markLetterSent(pid,"FOLLOWUP");
+      render();closeModal();toast("Marked as followed up");}]]);});
+
+window.batchFollowUp=()=>requireSettings(()=>{
+  const due=followUpsDue();
+  if(!due.length){toast("No follow-ups due");return;}
+  const pages=due.map(followUpHTML);
+  const header=`<div class="noprint" style="font-family:system-ui,sans-serif;background:#f4f3ec;border:1px solid #ddd;border-radius:10px;padding:12px 16px;margin-bottom:20px">
+    <b>${nOf(due.length,"follow-up")}</b> — the second and final letter for each. One per page.</div>`;
+  openPrintable(`HeirBud follow-ups — ${due.length}`,header+pages.join(""));
+  due.forEach(p=>markLetterSent(p.property_id,"FOLLOWUP"));
+  render();toast(`${nOf(due.length,"follow-up")} printed — that's the last one for each`);});
+
+/* Notes: what was actually said, with a date, so the third call isn't the first. */
+window.noteDlg=pid=>{const p=DB.prospects[pid];const notes=p.notes||[];
+  modal("Notes — "+p.name,
+    `<label class="f">Add a note</label>
+     <textarea id="noteBox" rows="3" placeholder="Called 2pm — wife answered, said he's in a care home, will pass the message on."></textarea>
+     ${p.mailed_on?`<p class="meta" style="margin-top:10px">First letter mailed ${esc(p.mailed_on)} (${daysSince(p.mailed_on)} days ago)${p.followup_on?`, follow-up ${esc(p.followup_on)}`:""}.</p>`:""}
+     ${notes.length?`<label class="f">History</label>`+notes.map(n=>
+       `<div class="row"><div class="meta" style="color:var(--faint)">${esc(String(n.at).slice(0,10))}</div><div>${esc(n.text)}</div></div>`).join(""):""}`,
+    [["Close","",closeModal],["Save note","pri",()=>{
+      const v=$("#noteBox").value;if(!v.trim())return closeModal();
+      addNote(pid,v);render();closeModal();toast("Note saved");}]]);};
+
 window.collectDlg=pid=>{const p=DB.prospects[pid];
   modal("They got paid — "+p.name,
     `<p class="meta">Mark that the claimant received their money from the state. That unlocks the invoice, or in gratuity mode a thank-you note.</p>`,
@@ -1167,14 +1277,16 @@ window.markPaid=pid=>{if(!confirm("Record the fee as paid? Closes the record as 
 /* ═══ EXPORT ════════════════════════════════════════════════════════════════ */
 const EXPORT_COLS=["property_id","name","first","last","amount","property_type","holder","street","city","state","zip",
   "report_date","custody_date","eligibility_state","eligibility_reviewed","custody_evidence","phone","email",
-  "stage","fee_model","priority_score","expected_fee","claims_for_this_person","household",
+  "stage","mailed_on","mailed_count","followup_on","notes_count","last_note",
+  "fee_model","priority_score","expected_fee","claims_for_this_person","household",
   "suppression_status","funds_received","fee_invoiced","fee_paid","created_at","updated_at"];
 function toCSV(){
   const q=v=>{const s=String(v??"");return /[",\n]/.test(s)?'"'+s.replace(/"/g,'""')+'"':s;};
   const lines=[EXPORT_COLS.join(",")];
   for(const p of all()){const s=score(p);
     const row={...p,eligibility_state:elig(p).state,priority_score:s.score,expected_fee:s.expected_fee,
-      claims_for_this_person:s.leverage.claims,household:s.leverage.household};
+      claims_for_this_person:s.leverage.claims,household:s.leverage.household,
+      notes_count:(p.notes||[]).length,last_note:(p.notes||[])[0]?.text||""};
     lines.push(EXPORT_COLS.map(c=>q(row[c])).join(","));}
   return lines.join("\n");}
 $("#exportBtn").onclick=()=>{

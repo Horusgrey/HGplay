@@ -29,6 +29,69 @@ RULES = [
 ]
 
 
+# ── Finite follow-up ────────────────────────────────────────────────────────
+# Two letters is a reminder. Three is pestering, and the difference is the whole
+# reputation of this trade. So the second letter says in plain words that it is
+# the last one, and these rules make that promise true whether or not the
+# operator remembers making it.
+FOLLOWUP_DAYS = 21
+MAX_LETTERS = 2
+
+
+def _date_only(value):
+    """Parse a stored date or timestamp; None when unusable."""
+    if not value:
+        return None
+    text = str(value)[:10]
+    try:
+        return datetime.strptime(text, "%Y-%m-%d")
+    except ValueError:
+        return None
+
+
+def days_since_mailed(prospect: dict, as_of: datetime | None = None) -> int | None:
+    d = _date_only(prospect.get("mailed_on"))
+    if d is None:
+        return None
+    return ((as_of or datetime.now()) - d).days
+
+
+def followup_due(prospect: dict, as_of: datetime | None = None) -> bool:
+    """One nudge, three weeks out, and only while they've said nothing.
+
+    Any reply moves the record past CONTACTED, which ends the sequence — an
+    answered letter must never be followed by a chaser.
+    """
+    if str(prospect.get("suppression_status") or "").upper() == "SUPPRESSED":
+        return False
+    if prospect.get("stage") != "CONTACTED":
+        return False
+    if int(prospect.get("mailed_count") or 0) >= MAX_LETTERS:
+        return False
+    elapsed = days_since_mailed(prospect, as_of)
+    return elapsed is not None and elapsed >= FOLLOWUP_DAYS
+
+
+def followups_due(prospects: list[dict], as_of: datetime | None = None) -> list[dict]:
+    """Oldest silence first — those have waited longest for a second try."""
+    due = [p for p in prospects if followup_due(p, as_of)]
+    return sorted(due, key=lambda p: -(days_since_mailed(p, as_of) or 0))
+
+
+def record_letter(prospect: dict, kind: str = "FIRST", on: str | None = None) -> dict:
+    """Write down that a letter went out. Mutates and returns the prospect."""
+    on = on or datetime.now().strftime("%Y-%m-%d")
+    if kind.upper() == "FOLLOWUP":
+        prospect["followup_on"] = on
+        prospect["mailed_count"] = int(prospect.get("mailed_count") or 1) + 1
+    else:
+        prospect.setdefault("mailed_on", on)
+        prospect["mailed_count"] = max(1, int(prospect.get("mailed_count") or 0))
+    if prospect.get("stage") in ("IDENTIFIED", "ENRICHED", None):
+        prospect["stage"] = "CONTACTED"
+    return prospect
+
+
 def days_since(iso_ts: str) -> int:
     try:
         return (datetime.now() - datetime.fromisoformat(iso_ts)).days
