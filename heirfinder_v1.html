@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HeirFinder — Unclaimed Property Engine</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --ink: #0f0e0c;
+    --paper: #f5f0e8;
+    --paper2: #ede8dc;
+    --paper3: #e0dace;
+    --gold: #c8922a;
+    --gold-light: #e8b84b;
+    --rust: #a63d2f;
+    --green: #2a6b3c;
+    --muted: #7a7060;
+    --border: #c8bfaa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 18px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 3px solid var(--gold);
+  }
+
+  .logo {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+  }
+
+  .logo-mark {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--gold);
+  }
+
+  .logo-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: #8a8070;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .header-stats {
+    display: flex;
+    gap: 24px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+  }
+
+  .stat { color: #8a8070; }
+  .stat span { color: var(--gold-light); font-weight: 500; }
+
+  /* TABS */
+  .tabs {
+    background: var(--ink);
+    display: flex;
+    padding: 0 32px;
+    gap: 2px;
+    border-bottom: 1px solid #2a2720;
+  }
+
+  .tab {
+    padding: 10px 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    cursor: pointer;
+    color: #5a5448;
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    background: none;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .tab:hover { color: #a89f8e; }
+  .tab.active { color: var(--gold); border-bottom-color: var(--gold); }
+
+  /* MAIN LAYOUT */
+  .main {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    height: calc(100vh - 100px);
+  }
+
+  /* LEFT PANEL */
+  .left-panel {
+    background: var(--paper2);
+    border-right: 1px solid var(--border);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .panel-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--paper);
+  }
+
+  .panel-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+
+  .panel-desc {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+    font-weight: 500;
+  }
+
+  /* INPUT FORM */
+  .input-form {
+    padding: 20px 24px;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .field-group { display: flex; flex-direction: column; gap: 5px; }
+
+  label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  input, select, textarea {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 9px 12px;
+    font-size: 13px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--gold);
+    box-shadow: 0 0 0 2px rgba(200, 146, 42, 0.12);
+  }
+
+  textarea { resize: vertical; min-height: 70px; font-size: 12px; }
+
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* BUTTONS */
+  .btn {
+    padding: 11px 20px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Syne', sans-serif;
+    transition: all 0.15s;
+  }
+
+  .btn-primary {
+    background: var(--gold);
+    color: var(--ink);
+  }
+  .btn-primary:hover { background: var(--gold-light); }
+  .btn-primary:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover { background: var(--paper3); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--rust);
+    border: 1px solid #e8c8c0;
+    font-size: 11px;
+    padding: 7px 14px;
+  }
+  .btn-danger:hover { background: #fdf0ee; }
+
+  .btn-green {
+    background: var(--green);
+    color: white;
+  }
+  .btn-green:hover { background: #1e5430; }
+
+  .divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 4px 0;
+  }
+
+  /* PASTE INPUT */
+  .paste-section {
+    padding: 0 24px 20px;
+  }
+
+  .paste-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 6px;
+    display: block;
+  }
+
+  .paste-area {
+    width: 100%;
+    min-height: 90px;
+    background: var(--ink);
+    color: #a8d08a;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    border: 1px solid #2a2720;
+    border-radius: 4px;
+    padding: 12px;
+    resize: vertical;
+  }
+
+  .paste-area::placeholder { color: #3a3830; }
+
+  .parse-btn {
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  /* RIGHT PANEL */
+  .right-panel {
+    overflow-y: auto;
+    background: var(--paper);
+  }
+
+  /* RECORDS TABLE */
+  .records-header {
+    padding: 18px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--paper);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .records-title {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .records-actions { display: flex; gap: 8px; }
+
+  /* RECORD CARD */
+  .record-card {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+
+  .record-card:hover { background: var(--paper2); }
+
+  .record-summary {
+    padding: 16px 28px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
+    cursor: pointer;
+    align-items: start;
+  }
+
+  .record-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    margin-bottom: 3px;
+  }
+
+  .record-meta {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .record-amount {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--green);
+    text-align: right;
+  }
+
+  .record-amount.unknown { font-size: 13px; color: var(--muted); }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 2px;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-new { background: #e8f4fd; color: #2a6b9c; }
+  .status-enriched { background: #f0f8f0; color: var(--green); }
+  .status-contacted { background: #fef9e7; color: #8a6a00; }
+  .status-claimed { background: #e8f5e9; color: #1a5c2a; border: 1px solid #a8d8a8; }
+  .status-dead { background: #fdf0f0; color: var(--rust); }
+
+  /* EXPANDED RECORD */
+  .record-expanded {
+    padding: 0 28px 24px;
+    display: none;
+    border-top: 1px solid var(--border);
+  }
+
+  .record-expanded.open { display: block; }
+
+  .expanded-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 18px;
+  }
+
+  .info-block {
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 16px;
+  }
+
+  .info-block-title {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .info-line {
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    margin-bottom: 4px;
+    line-height: 1.5;
+  }
+
+  .info-line a {
+    color: var(--gold);
+    text-decoration: none;
+  }
+  .info-line a:hover { text-decoration: underline; }
+
+  .confidence-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .confidence-fill {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease;
+  }
+
+  .conf-high { background: var(--green); }
+  .conf-med { background: var(--gold); }
+  .conf-low { background: var(--rust); }
+
+  /* EMAIL TEMPLATE */
+  .email-block {
+    margin-top: 16px;
+    background: var(--paper2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    overflow: hidden;
+  }
+
+  .email-header {
+    padding: 10px 16px;
+    background: var(--ink);
+    color: var(--gold);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .email-body {
+    padding: 16px;
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink);
+    font-family: 'JetBrains Mono', monospace;
+    white-space: pre-wrap;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+
+  .record-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+
+  .status-selector {
+    padding: 7px 10px;
+    font-size: 11px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+
+  /* LOADING */
+  .loading-bar {
+    height: 2px;
+    background: var(--gold);
+    width: 0%;
+    transition: width 0.3s ease;
+    position: fixed;
+    top: 0;
+    left: 0;
+    z-index: 9999;
+  }
+
+  /* EMPTY STATE */
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 60%;
+    gap: 12px;
+    color: var(--muted);
+  }
+
+  .empty-icon {
+    font-size: 48px;
+    opacity: 0.3;
+  }
+
+  .empty-text {
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  /* TOAST */
+  .toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 10px 16px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    border-left: 3px solid var(--gold);
+    animation: slideIn 0.2s ease;
+    max-width: 320px;
+  }
+
+  .toast.error { border-left-color: var(--rust); }
+  .toast.success { border-left-color: var(--green); }
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* SEARCH LINKS */
+  .search-links {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .search-link {
+    padding: 4px 10px;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-decoration: none;
+    color: var(--ink);
+    text-transform: uppercase;
+    transition: all 0.1s;
+  }
+
+  .search-link:hover {
+    background: var(--gold);
+    color: var(--ink);
+    border-color: var(--gold);
+  }
+
+  /* SCROLLBAR */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: var(--paper2); }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* API KEY modal */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(15,14,12,0.85);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal {
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 32px;
+    width: 480px;
+    max-width: 95vw;
+  }
+
+  .modal-title {
+    font-size: 18px;
+    font-weight: 800;
+    margin-bottom: 8px;
+  }
+
+  .modal-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 20px;
+  }
+
+  .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+
+  .note {
+    font-size: 11px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--muted);
+    margin-top: 8px;
+    line-height: 1.5;
+  }
+
+  /* NOTES FIELD */
+  .notes-area {
+    width: 100%;
+    background: var(--paper);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--ink);
+    resize: vertical;
+    min-height: 50px;
+  }
+
+  /* FEE PANEL */
+  .fee-panel {
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+    background: #fdfaf4;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .fee-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  .fee-options { display: flex; gap: 8px; }
+
+  .fee-option {
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    cursor: pointer;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Syne', sans-serif;
+    transition: all 0.1s;
+  }
+
+  .fee-option.selected {
+    background: var(--ink);
+    color: var(--gold);
+    border-color: var(--ink);
+  }
+</style>
+</head>
+<body>
+
+<div class="loading-bar" id="loadingBar"></div>
+
+<!-- API KEY MODAL -->
+<div class="modal-overlay" id="apiModal">
+  <div class="modal">
+    <div class="modal-title">⚖ HeirFinder</div>
+    <div class="modal-desc">Enter your Anthropic API key to power the enrichment and outreach engine. Your key is stored locally in this browser only — never transmitted anywhere except Anthropic's API.</div>
+    <div class="field-group">
+      <label>Anthropic API Key</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-..." />
+    </div>
+    <p class="note">Get your key at console.anthropic.com → API Keys</p>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="saveApiKey()">Launch HeirFinder</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="logo">
+    <span class="logo-mark">⚖ HEIRFINDER</span>
+    <span class="logo-sub">Unclaimed Property Engine v1.0</span>
+  </div>
+  <div class="header-stats">
+    <div class="stat">Records: <span id="statTotal">0</span></div>
+    <div class="stat">Enriched: <span id="statEnriched">0</span></div>
+    <div class="stat">Contacted: <span id="statContacted">0</span></div>
+    <div class="stat">Claimed: <span id="statClaimed">0</span></div>
+    <div class="stat">Pipeline: <span id="statValue">$0</span></div>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+  <button class="tab active" onclick="switchTab('records')">Records</button>
+  <button class="tab" onclick="switchTab('bulkparse')">Bulk Parse</button>
+  <button class="tab" onclick="switchTab('export')">Export</button>
+</div>
+
+<!-- MAIN -->
+<div class="main">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="panel-header">
+      <div class="panel-title">Add Record</div>
+      <div class="panel-desc">Enter a single record from state bulk data</div>
+    </div>
+
+    <div class="input-form">
+      <div class="field-group">
+        <label>Full Name</label>
+        <input type="text" id="fName" placeholder="John A. Smith" />
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label>State</label>
+          <select id="fState">
+            <option value="">Select...</option>
+            <option>Alabama</option><option>Alaska</option><option>Arizona</option>
+            <option>Arkansas</option><option>California</option><option>Colorado</option>
+            <option>Connecticut</option><option>Delaware</option><option>Florida</option>
+            <option>Georgia</option><option>Hawaii</option><option>Idaho</option>
+            <option>Illinois</option><option>Indiana</option><option>Iowa</option>
+            <option>Kansas</option><option>Kentucky</option><option>Louisiana</option>
+            <option>Maine</option><option>Maryland</option><option>Massachusetts</option>
+            <option>Michigan</option><option>Minnesota</option><option>Mississippi</option>
+            <option>Missouri</option><option>Montana</option><option>Nebraska</option>
+            <option>Nevada</option><option>New Hampshire</option><option>New Jersey</option>
+            <option>New Mexico</option><option>New York</option><option>North Carolina</option>
+            <option>North Dakota</option><option>Ohio</option><option>Oklahoma</option>
+            <option>Oregon</option><option>Pennsylvania</option><option>Rhode Island</option>
+            <option>South Carolina</option><option>South Dakota</option><option>Tennessee</option>
+            <option>Texas</option><option>Utah</option><option>Vermont</option>
+            <option>Virginia</option><option>Washington</option><option>West Virginia</option>
+            <option>Wisconsin</option><option>Wyoming</option>
+          </select>
+        </div>
+        <div class="field-group">
+          <label>Amount</label>
+          <input type="text" id="fAmount" placeholder="$847.00 or range" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Last Known Address</label>
+        <input type="text" id="fAddress" placeholder="123 Oak St, Chicago IL 60601" />
+      </div>
+      <div class="row-2">
+        <div class="field-group">
+          <label>Property Type</label>
+          <input type="text" id="fType" placeholder="Uncashed check, etc." />
+        </div>
+        <div class="field-group">
+          <label>Report Year</label>
+          <input type="text" id="fYear" placeholder="2021" />
+        </div>
+      </div>
+      <div class="field-group">
+        <label>Notes</label>
+        <textarea id="fNotes" placeholder="Any additional context..."></textarea>
+      </div>
+      <button class="btn btn-primary" id="addBtn" onclick="addAndEnrich()">
+        + Add &amp; Enrich with AI
+      </button>
+      <button class="btn btn-secondary" onclick="addManual()">
+        Add Without AI
+      </button>
+    </div>
+
+    <hr class="divider" style="margin: 0 24px;">
+
+    <!-- PASTE BULK -->
+    <div class="paste-section" style="padding: 20px 24px;">
+      <span class="paste-label">Quick Paste (Raw Row)</span>
+      <textarea class="paste-area" id="pasteArea" placeholder="Paste a raw CSV row or copied text from state database...
+e.g.: Smith, John | 123 Oak St Chicago IL | $450 | Uncashed paycheck | 2022"></textarea>
+      <button class="btn btn-secondary parse-btn" onclick="parsePaste()">Parse &amp; Fill Form</button>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel" id="rightPanel">
+    <!-- FEE PANEL -->
+    <div class="fee-panel">
+      <span class="fee-label">Fee Model:</span>
+      <div class="fee-options">
+        <button class="fee-option selected" id="fee-voluntary" onclick="setFee('voluntary')">Voluntary / Goodwill</button>
+        <button class="fee-option" id="fee-percent" onclick="setFee('percent')">10–15% of Claim</button>
+        <button class="fee-option" id="fee-flat" onclick="setFee('flat')">Flat Fee</button>
+        <button class="fee-option" id="fee-undecided" onclick="setFee('undecided')">Undecided</button>
+      </div>
+    </div>
+
+    <!-- RECORDS HEADER -->
+    <div class="records-header">
+      <span class="records-title" id="recordsCount">No Records Yet</span>
+      <div class="records-actions">
+        <button class="btn btn-secondary" style="font-size:11px;padding:6px 12px;" onclick="exportCSV()">Export CSV</button>
+        <button class="btn btn-danger" onclick="clearAll()">Clear All</button>
+      </div>
+    </div>
+
+    <!-- RECORDS LIST -->
+    <div id="recordsList">
+      <div class="empty-state">
+        <div class="empty-icon">⚖</div>
+        <div class="empty-text">Add your first record</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">Paste from state bulk data or enter manually</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let records = JSON.parse(localStorage.getItem('hf_records') || '[]');
+let apiKey = localStorage.getItem('hf_apikey') || '';
+let feeModel = localStorage.getItem('hf_fee') || 'voluntary';
+let activeTab = 'records';
+let expandedId = null;
+
+// ─── INIT ────────────────────────────────────────────────
+window.onload = () => {
+  if (apiKey) {
+    document.getElementById('apiModal').style.display = 'none';
+  }
+  setFee(feeModel);
+  renderAll();
+};
+
+function saveApiKey() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key.startsWith('sk-ant-')) {
+    toast('Key should start with sk-ant-', 'error');
+    return;
+  }
+  apiKey = key;
+  localStorage.setItem('hf_apikey', key);
+  document.getElementById('apiModal').style.display = 'none';
+  toast('API key saved. HeirFinder ready.', 'success');
+}
+
+// ─── FEE MODEL ───────────────────────────────────────────
+function setFee(model) {
+  feeModel = model;
+  localStorage.setItem('hf_fee', model);
+  ['voluntary','percent','flat','undecided'].forEach(f => {
+    document.getElementById('fee-'+f)?.classList.toggle('selected', f === model);
+  });
+}
+
+function getFeeText() {
+  const map = {
+    voluntary: 'No fee — this is a free public service to help you recover what\'s yours.',
+    percent: 'If you recover the funds, I ask for a 10–15% finder\'s fee — only if you actually claim it.',
+    flat: 'I charge a small flat finder\'s fee if the claim is successful.',
+    undecided: 'This is a no-strings inquiry — happy to discuss how I work.'
+  };
+  return map[feeModel] || map.voluntary;
+}
+
+// ─── ADD RECORD ──────────────────────────────────────────
+function getFormData() {
+  return {
+    id: Date.now(),
+    name: document.getElementById('fName').value.trim(),
+    state: document.getElementById('fState').value,
+    amount: document.getElementById('fAmount').value.trim(),
+    address: document.getElementById('fAddress').value.trim(),
+    type: document.getElementById('fType').value.trim(),
+    year: document.getElementById('fYear').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+    status: 'new',
+    enriched: null,
+    email: null,
+    addedAt: new Date().toISOString()
+  };
+}
+
+function validateForm(rec) {
+  if (!rec.name) { toast('Name is required', 'error'); return false; }
+  if (!rec.state) { toast('State is required', 'error'); return false; }
+  return true;
+}
+
+function clearForm() {
+  ['fName','fState','fAmount','fAddress','fType','fYear','fNotes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = id === 'fState' ? '' : '';
+  });
+}
+
+async function addAndEnrich() {
+  const rec = getFormData();
+  if (!validateForm(rec)) return;
+  if (!apiKey) { toast('Add API key first', 'error'); return; }
+
+  records.unshift(rec);
+  save();
+  clearForm();
+  renderAll();
+  expandedId = rec.id;
+
+  await enrichRecord(rec.id);
+}
+
+function addManual() {
+  const rec = getFormData();
+  if (!validateForm(rec)) return;
+  records.unshift(rec);
+  save();
+  clearForm();
+  renderAll();
+  toast('Record added', 'success');
+}
+
+// ─── AI ENRICHMENT ───────────────────────────────────────
+async function enrichRecord(id) {
+  const idx = records.findIndex(r => r.id === id);
+  if (idx === -1) return;
+  const rec = records[idx];
+
+  loading(true);
+  toast('Enriching with AI...');
+
+  const prompt = `You are an unclaimed property research assistant. Analyze this record and return ONLY valid JSON (no markdown, no explanation).
+
+RECORD:
+Name: ${rec.name}
+Last Known Address: ${rec.address || 'Unknown'}
+State: ${rec.state}
+Property Amount: ${rec.amount || 'Unknown'}
+Property Type: ${rec.type || 'Unknown'}
+Report Year: ${rec.year || 'Unknown'}
+Notes: ${rec.notes || 'None'}
+
+Return this exact JSON structure:
+{
+  "confidence": "high|medium|low",
+  "confidence_score": 0-100,
+  "confidence_reason": "Why this confidence level",
+  "likely_current_city": "Best guess at current city/state based on old address",
+  "property_type_clean": "Clean description of the property type",
+  "amount_numeric": 0,
+  "amount_note": "Notes on the amount (exact/range/unknown)",
+  "state_claim_url": "Direct URL to ${rec.state} unclaimed property search page",
+  "priority": "high|medium|low",
+  "priority_reason": "Why this priority level",
+  "skip_trace_notes": "Specific advice for finding this person based on the data",
+  "search_queries": ["Google search 1", "Google search 2", "Social media search"],
+  "red_flags": ["Any concerns about this record"],
+  "outreach_subject": "Email subject line (compelling, not spammy)",
+  "outreach_email": "Full email body — transparent, helpful, no pressure, mention ${rec.state} state database. ${getFeeText()} Sign off as Zachary from Aurions House."
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 1200,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let text = data.content[0].text.trim();
+    text = text.replace(/```json|```/g, '').trim();
+    const enriched = JSON.parse(text);
+
+    records[idx].enriched = enriched;
+    records[idx].email = enriched.outreach_email;
+    records[idx].status = 'enriched';
+
+    save();
+    renderAll();
+    toast('Enriched successfully', 'success');
+  } catch(e) {
+    console.error(e);
+    toast('Enrichment failed: ' + e.message, 'error');
+  } finally {
+    loading(false);
+  }
+}
+
+// ─── PARSE PASTE ─────────────────────────────────────────
+async function parsePaste() {
+  const text = document.getElementById('pasteArea').value.trim();
+  if (!text) return;
+  if (!apiKey) { toast('Add API key first', 'error'); return; }
+
+  loading(true);
+  toast('Parsing...');
+
+  const prompt = `Parse this raw unclaimed property record and return ONLY valid JSON:
+"${text}"
+
+{
+  "name": "Full name",
+  "state": "Full state name",
+  "amount": "Amount as string",
+  "address": "Address",
+  "type": "Property type",
+  "year": "Year as string"
+}`;
+
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 300,
+        messages: [{ role: 'user', content: prompt }]
+      })
+    });
+
+    const data = await res.json();
+    let text2 = data.content[0].text.trim().replace(/```json|```/g, '').trim();
+    const parsed = JSON.parse(text2);
+
+    if (parsed.name) document.getElementById('fName').value = parsed.name;
+    if (parsed.state) document.getElementById('fState').value = parsed.state;
+    if (parsed.amount) document.getElementById('fAmount').value = parsed.amount;
+    if (parsed.address) document.getElementById('fAddress').value = parsed.address;
+    if (parsed.type) document.getElementById('fType').value = parsed.type;
+    if (parsed.year) document.getElementById('fYear').value = parsed.year;
+
+    document.getElementById('pasteArea').value = '';
+    toast('Parsed — review and hit Add & Enrich', 'success');
+  } catch(e) {
+    toast('Parse failed: ' + e.message, 'error');
+  } finally {
+    loading(false);
+  }
+}
+
+// ─── RENDER ──────────────────────────────────────────────
+function renderAll() {
+  renderStats();
+  renderRecords();
+}
+
+function renderStats() {
+  const total = records.length;
+  const enriched = records.filter(r => r.status === 'enriched' || r.status === 'contacted').length;
+  const contacted = records.filter(r => r.status === 'contacted').length;
+  const claimed = records.filter(r => r.status === 'claimed').length;
+
+  let val = 0;
+  records.forEach(r => {
+    const amt = r.enriched?.amount_numeric || parseAmount(r.amount);
+    if (amt > 0) val += amt;
+  });
+
+  document.getElementById('statTotal').textContent = total;
+  document.getElementById('statEnriched').textContent = enriched;
+  document.getElementById('statContacted').textContent = contacted;
+  document.getElementById('statClaimed').textContent = claimed;
+  document.getElementById('statValue').textContent = val > 0 ? '$' + val.toLocaleString() : '$0';
+  document.getElementById('recordsCount').textContent = total
+    ? `${total} Record${total !== 1 ? 's' : ''}`
+    : 'No Records Yet';
+}
+
+function parseAmount(str) {
+  if (!str) return 0;
+  const n = parseFloat(str.replace(/[^0-9.]/g, ''));
+  return isNaN(n) ? 0 : n;
+}
+
+function renderRecords() {
+  const list = document.getElementById('recordsList');
+  if (!records.length) {
+    list.innerHTML = `<div class="empty-state">
+      <div class="empty-icon">⚖</div>
+      <div class="empty-text">Add your first record</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:4px;">Paste from state bulk data or enter manually</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = records.map(r => renderCard(r)).join('');
+}
+
+function renderCard(r) {
+  const e = r.enriched;
+  const isOpen = expandedId === r.id;
+  const amt = e?.amount_numeric || parseAmount(r.amount);
+  const amtDisplay = amt > 0
+    ? `$${amt.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}`
+    : (r.amount || 'Unknown');
+  const amtClass = amt > 0 ? '' : 'unknown';
+
+  const confScore = e?.confidence_score || 0;
+  const confClass = confScore >= 70 ? 'conf-high' : confScore >= 40 ? 'conf-med' : 'conf-low';
+
+  const statusClass = {
+    new: 'status-new', enriched: 'status-enriched',
+    contacted: 'status-contacted', claimed: 'status-claimed', dead: 'status-dead'
+  }[r.status] || 'status-new';
+
+  const searchLinks = e?.search_queries?.map((q, i) => {
+    const url = `https://www.google.com/search?q=${encodeURIComponent(q)}`;
+    return `<a class="search-link" href="${url}" target="_blank">Search ${i+1}</a>`;
+  }).join('') || '';
+
+  const stateLink = e?.state_claim_url
+    ? `<a class="search-link" href="${e.state_claim_url}" target="_blank">State DB</a>`
+    : '';
+
+  const fastPeople = r.name
+    ? `<a class="search-link" href="https://www.fastpeoplesearch.com/name/${encodeURIComponent(r.name)}" target="_blank">FastPeople</a>`
+    : '';
+
+  const truePeople = r.name
+    ? `<a class="search-link" href="https://www.truepeoplesearch.com/results?name=${encodeURIComponent(r.name)}&citystatezip=${encodeURIComponent(r.address||'')}" target="_blank">TruePeople</a>`
+    : '';
+
+  return `<div class="record-card" id="card-${r.id}">
+    <div class="record-summary" onclick="toggleExpand(${r.id})">
+      <div>
+        <div class="record-name">${r.name}</div>
+        <div class="record-meta">
+          <span>${r.state || '—'}</span>
+          <span>${r.address || '—'}</span>
+          <span>${r.type || '—'}</span>
+          ${r.year ? `<span>${r.year}</span>` : ''}
+          <span class="status-badge ${statusClass}">${r.status}</span>
+          ${e ? `<span class="status-badge" style="background:#f0ede4;color:var(--muted);">
+            ${e.priority?.toUpperCase() || ''} PRIORITY
+          </span>` : ''}
+        </div>
+      </div>
+      <div>
+        <div class="record-amount ${amtClass}">${amtDisplay}</div>
+      </div>
+    </div>
+
+    <div class="record-expanded ${isOpen ? 'open' : ''}" id="exp-${r.id}">
+
+      ${e ? `
+      <div class="expanded-grid">
+        <div class="info-block">
+          <div class="info-block-title">Confidence</div>
+          <div class="info-line">${e.confidence?.toUpperCase()} — ${e.confidence_score}%</div>
+          <div class="confidence-bar">
+            <div class="confidence-fill ${confClass}" style="width:${e.confidence_score}%"></div>
+          </div>
+          <div class="info-line" style="margin-top:8px;color:var(--muted);">${e.confidence_reason}</div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-title">Property Details</div>
+          <div class="info-line">${e.property_type_clean || r.type || '—'}</div>
+          <div class="info-line">${e.amount_note || ''}</div>
+          <div class="info-line">Likely located: ${e.likely_current_city || '—'}</div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-title">Skip Trace Notes</div>
+          <div class="info-line">${e.skip_trace_notes || '—'}</div>
+        </div>
+
+        <div class="info-block">
+          <div class="info-block-title">Red Flags</div>
+          ${e.red_flags?.length
+            ? e.red_flags.map(f => `<div class="info-line" style="color:var(--rust);">• ${f}</div>`).join('')
+            : '<div class="info-line" style="color:var(--green);">None flagged</div>'}
+        </div>
+      </div>
+
+      <div style="margin-top:14px;">
+        <div class="info-block-title" style="font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Search Links</div>
+        <div class="search-links">
+          ${stateLink}${fastPeople}${truePeople}${searchLinks}
+        </div>
+      </div>
+
+      <div class="email-block">
+        <div class="email-header">
+          <span>Outreach Email — ${e.outreach_subject || 'Unclaimed Property Notice'}</span>
+          <button class="btn btn-secondary" style="padding:3px 10px;font-size:9px;" onclick="copyEmail(${r.id})">Copy</button>
+        </div>
+        <div class="email-body" id="email-${r.id}">${e.outreach_email || ''}</div>
+      </div>
+      ` : `
+      <div style="padding-top:16px;">
+        <button class="btn btn-primary" onclick="enrichRecord(${r.id})" style="font-size:11px;">
+          ✦ Enrich with AI
+        </button>
+      </div>
+      `}
+
+      <div style="margin-top:14px;">
+        <label style="margin-bottom:5px;display:block;">Notes</label>
+        <textarea class="notes-area" onchange="updateNotes(${r.id}, this.value)">${r.notes || ''}</textarea>
+      </div>
+
+      <div class="record-actions">
+        <select class="status-selector" onchange="updateStatus(${r.id}, this.value)">
+          <option value="new" ${r.status==='new'?'selected':''}>New</option>
+          <option value="enriched" ${r.status==='enriched'?'selected':''}>Enriched</option>
+          <option value="contacted" ${r.status==='contacted'?'selected':''}>Contacted</option>
+          <option value="claimed" ${r.status==='claimed'?'selected':''}>Claimed ✓</option>
+          <option value="dead" ${r.status==='dead'?'selected':''}>Dead End</option>
+        </select>
+        <button class="btn btn-green" onclick="copyEmail(${r.id})">Copy Email</button>
+        ${e ? `<button class="btn btn-secondary" style="font-size:11px;" onclick="enrichRecord(${r.id})">Re-Enrich</button>` : ''}
+        <button class="btn btn-danger" onclick="deleteRecord(${r.id})">Delete</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ─── INTERACTIONS ─────────────────────────────────────────
+function toggleExpand(id) {
+  expandedId = expandedId === id ? null : id;
+  renderRecords();
+}
+
+function updateStatus(id, status) {
+  const idx = records.findIndex(r => r.id === id);
+  if (idx > -1) {
+    records[idx].status = status;
+    save();
+    renderAll();
+  }
+}
+
+function updateNotes(id, notes) {
+  const idx = records.findIndex(r => r.id === id);
+  if (idx > -1) {
+    records[idx].notes = notes;
+    save();
+    renderStats();
+  }
+}
+
+function deleteRecord(id) {
+  if (!confirm('Delete this record?')) return;
+  records = records.filter(r => r.id !== id);
+  if (expandedId === id) expandedId = null;
+  save();
+  renderAll();
+  toast('Record deleted');
+}
+
+function clearAll() {
+  if (!confirm('Clear ALL records? This cannot be undone.')) return;
+  records = [];
+  expandedId = null;
+  save();
+  renderAll();
+  toast('All records cleared');
+}
+
+function copyEmail(id) {
+  const rec = records.find(r => r.id === id);
+  if (!rec?.email) { toast('No email generated yet', 'error'); return; }
+  const subject = rec.enriched?.outreach_subject || 'Unclaimed Property Notice';
+  const full = `Subject: ${subject}\n\n${rec.email}`;
+  navigator.clipboard.writeText(full).then(() => {
+    toast('Email copied to clipboard', 'success');
+  }).catch(() => {
+    const el = document.getElementById('email-' + id);
+    if (el) {
+      const range = document.createRange();
+      range.selectNode(el);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      document.execCommand('copy');
+      toast('Email copied', 'success');
+    }
+  });
+}
+
+// ─── EXPORT ──────────────────────────────────────────────
+function exportCSV() {
+  if (!records.length) { toast('No records to export', 'error'); return; }
+  const headers = ['Name','State','Amount','Address','Type','Year','Status','Priority','Confidence','Current Location','Notes','Added'];
+  const rows = records.map(r => [
+    r.name, r.state, r.amount, r.address, r.type, r.year, r.status,
+    r.enriched?.priority || '',
+    r.enriched?.confidence_score || '',
+    r.enriched?.likely_current_city || '',
+    r.notes?.replace(/,/g,'') || '',
+    new Date(r.addedAt).toLocaleDateString()
+  ]);
+  const csv = [headers, ...rows].map(r => r.map(c => `"${c||''}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `heirfinder-export-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  toast('CSV exported', 'success');
+}
+
+// ─── TABS ────────────────────────────────────────────────
+function switchTab(tab) {
+  activeTab = tab;
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    t.classList.toggle('active', ['records','bulkparse','export'][i] === tab);
+  });
+}
+
+// ─── UTILS ───────────────────────────────────────────────
+function save() {
+  localStorage.setItem('hf_records', JSON.stringify(records));
+}
+
+function loading(on) {
+  const bar = document.getElementById('loadingBar');
+  bar.style.width = on ? '70%' : '100%';
+  if (!on) setTimeout(() => { bar.style.width = '0%'; }, 300);
+  document.getElementById('addBtn').disabled = on;
+}
+
+function toast(msg, type = 'info') {
+  const c = document.getElementById('toastContainer');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  c.appendChild(el);
+  setTimeout(() => { el.style.opacity = '0'; el.style.transition = '0.3s'; }, 2800);
+  setTimeout(() => el.remove(), 3100);
+}
+</script>
+</body>
+</html>

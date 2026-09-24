@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HeirBud Operator Console</title>
+<style>
+  :root{
+    --bg:#f5f4f0; --surface:#ffffff; --surface2:#faf9f6; --ink:#1c1a16;
+    --dim:#6d665a; --border:#e4ded1; --accent:#1a7f44; --accent-bg:#e7f3ec;
+    --warn:#9a5b00; --warn-bg:#fbf0dd; --danger:#b3261e; --danger-bg:#fbe7e5;
+    --info:#245e9c; --info-bg:#e6eef7; --shadow:0 1px 2px rgba(0,0,0,.06),0 4px 12px rgba(0,0,0,.04);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#141317; --surface:#1e1d23; --surface2:#26242c; --ink:#ece9e3;
+    --dim:#9b948a; --border:#332f3a; --accent:#4bbd78; --accent-bg:#16281d;
+    --warn:#e0a441; --warn-bg:#2c2413; --danger:#f0776c; --danger-bg:#2e1815;
+    --info:#6ba6e6; --info-bg:#141f2c; --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 16px rgba(0,0,0,.25);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+  header{position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);
+    padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  header h1{font-size:16px;margin:0;letter-spacing:.02em}
+  header h1 b{color:var(--accent)}
+  .banner{background:var(--warn-bg);color:var(--warn);font-size:12px;padding:6px 20px;
+    border-bottom:1px solid var(--border);text-align:center}
+  .spacer{flex:1}
+  .cfg{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--dim)}
+  .cfg input{width:120px;background:var(--surface2);border:1px solid var(--border);
+    border-radius:6px;padding:5px 8px;color:var(--ink);font-size:12px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--danger)}
+  .dot.ok{background:var(--accent)}
+  main{max-width:1200px;margin:0 auto;padding:20px;display:grid;gap:20px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:14px 16px;box-shadow:var(--shadow)}
+  .kpi .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  .kpi .val{font-size:24px;font-weight:650;margin-top:4px;font-variant-numeric:tabular-nums}
+  .kpi .sub{font-size:11px;color:var(--dim);margin-top:2px}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+  @media(max-width:820px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    box-shadow:var(--shadow);overflow:hidden}
+  .card h2{font-size:13px;margin:0;padding:12px 16px;border-bottom:1px solid var(--border);
+    display:flex;align-items:center;gap:8px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim)}
+  .card h2 .count{margin-left:auto;background:var(--surface2);border:1px solid var(--border);
+    border-radius:20px;padding:1px 9px;font-size:12px;color:var(--ink)}
+  .card .body{padding:8px 16px 14px;max-height:420px;overflow:auto}
+  .pipeline{display:flex;flex-direction:column;gap:6px;padding:12px 16px 16px}
+  .stage{display:flex;align-items:center;gap:10px;font-size:12px}
+  .stage .name{width:120px;color:var(--dim);flex-shrink:0}
+  .stage .bar{height:16px;border-radius:4px;background:var(--accent);min-width:2px}
+  .stage.SUPPRESSED .bar{background:var(--dim)}
+  .stage .n{font-variant-numeric:tabular-nums;font-weight:600}
+  .stage .v{color:var(--dim);font-size:11px}
+  .row{padding:9px 0;border-bottom:1px solid var(--border);display:flex;gap:10px;align-items:flex-start}
+  .row:last-child{border-bottom:none}
+  .row .main{flex:1;min-width:0}
+  .row .nm{font-weight:600}
+  .row .meta{font-size:12px;color:var(--dim);margin-top:1px}
+  .amt{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+  .pill{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:20px;
+    text-transform:uppercase;letter-spacing:.03em;font-weight:600;white-space:nowrap}
+  .pill.ok{background:var(--accent-bg);color:var(--accent)}
+  .pill.warn{background:var(--warn-bg);color:var(--warn)}
+  .pill.info{background:var(--info-bg);color:var(--info)}
+  .pill.danger{background:var(--danger-bg);color:var(--danger)}
+  button{font:inherit;font-size:12px;border:1px solid var(--border);background:var(--surface2);
+    color:var(--ink);border-radius:7px;padding:5px 10px;cursor:pointer}
+  button:hover{border-color:var(--dim)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+  button.danger{color:var(--danger);border-color:var(--danger)}
+  button:disabled{opacity:.45;cursor:not-allowed}
+  .btns{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.04em;color:var(--dim);
+    padding:8px 10px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--surface)}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:hover td{background:var(--surface2)}
+  .toolbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+  select,.inp{background:var(--surface2);border:1px solid var(--border);border-radius:7px;
+    padding:5px 8px;color:var(--ink);font:inherit;font-size:12px}
+  .empty{color:var(--dim);font-size:13px;padding:18px 4px;text-align:center}
+  .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--ink);
+    color:var(--bg);padding:10px 18px;border-radius:8px;font-size:13px;box-shadow:var(--shadow);
+    opacity:0;transition:opacity .2s;pointer-events:none;z-index:50;max-width:90vw}
+  .toast.show{opacity:1}
+  dialog{border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--ink);
+    box-shadow:var(--shadow);max-width:560px;width:92vw;padding:0}
+  dialog::backdrop{background:rgba(0,0,0,.4)}
+  dialog .dhead{padding:14px 18px;border-bottom:1px solid var(--border);font-weight:650;display:flex;gap:10px;align-items:center}
+  dialog .dbody{padding:16px 18px;max-height:60vh;overflow:auto}
+  dialog .dfoot{padding:12px 18px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:8px}
+  label.f{display:block;font-size:12px;color:var(--dim);margin:10px 0 3px}
+  .f input,.f textarea{width:100%;background:var(--surface2);border:1px solid var(--border);
+    border-radius:7px;padding:7px 9px;color:var(--ink);font:inherit}
+  pre{white-space:pre-wrap;font:12px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;
+    background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:12px;margin:0}
+  .analytics{padding:14px 16px 18px}
+  .an-narrative{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+  .an-narrative .ins{display:flex;gap:9px;font-size:13px;line-height:1.5}
+  .an-narrative .ins::before{content:"▸";color:var(--accent);flex-shrink:0}
+  .an-cols{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  @media(max-width:820px){.an-cols{grid-template-columns:1fr}}
+  .an-h{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin-bottom:8px}
+  .rung{margin-bottom:9px}
+  .rung .rtop{display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px}
+  .rung .rtop .rl{color:var(--dim)}
+  .rung .rtop .rv{font-variant-numeric:tabular-nums;font-weight:650}
+  .rung .rbar{height:14px;border-radius:4px;min-width:3px}
+  .rung.published .rbar{background:var(--info)}
+  .rung.eligible .rbar{background:var(--accent)}
+  .rung.expected .rbar{background:var(--warn)}
+  .rung.realized .rbar{background:var(--ink);opacity:.75}
+  .fn{display:flex;align-items:center;gap:8px;font-size:12px;margin-bottom:5px}
+  .fn .fname{width:112px;color:var(--dim);flex-shrink:0}
+  .fn .fbar{height:14px;border-radius:4px;background:var(--accent);min-width:2px;opacity:.85}
+  .fn .fn-n{font-variant-numeric:tabular-nums;font-weight:600;width:26px}
+  .fn .fn-c{color:var(--dim);font-size:11px}
+  .fn.leak .fn-c{color:var(--warn);font-weight:600}
+</style>
+</head>
+<body>
+<header>
+  <h1><b>HeirBud</b> Operator Console</h1>
+  <span class="pill info" id="stateFee">10% cap</span>
+  <div class="spacer"></div>
+  <div class="cfg">
+    <span class="dot" id="statusDot"></span><span id="statusText">connecting…</span>
+    <span>·</span>
+    <label>API key <input id="apiKey" type="password" placeholder="if required"></label>
+    <button id="importBtn" class="primary">⬆ Import data</button>
+    <button id="refreshBtn">↻ Refresh</button>
+  </div>
+  <input type="file" id="csvFile" accept=".csv,text/csv" style="display:none">
+</header>
+<div class="banner">Fees capped at Wisconsin's 10% in code · Click <b>⬆ Import data</b> to load your real CSV and begin · Telling someone they have money is always fine; get templates lawyer-reviewed before charging fees on estates.</div>
+
+<main>
+  <section class="kpis" id="kpis"></section>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Pipeline <span class="count" id="pipeCount">—</span></h2>
+      <div class="pipeline" id="pipeline"></div>
+    </div>
+    <div class="card">
+      <h2>Today's Actions <span class="count" id="actCount">0</span></h2>
+      <div class="body" id="actions"></div>
+    </div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Custody Verification Worklist <span class="count" id="verCount">0</span></h2>
+      <div class="body" id="worklist"></div>
+    </div>
+    <div class="card">
+      <h2>Outbox — awaiting approval <span class="count" id="obCount">0</span></h2>
+      <div class="toolbar" style="padding:8px 16px">
+        <button class="primary" id="sendBtn">▶ Send all approved (dry-run)</button>
+        <span class="pill warn">nothing sends without approval</span>
+      </div>
+      <div class="body" id="outbox"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Collections — the money loop <span class="count" id="colCount">$0 collected</span></h2>
+    <div class="body" id="collections"></div>
+  </div>
+
+  <div class="card">
+    <h2>From list to money — the funnel's story</h2>
+    <div class="analytics" id="analytics">
+      <div class="an-narrative" id="narrative"></div>
+      <div class="an-cols">
+        <div>
+          <div class="an-h">Value ladder</div>
+          <div id="ladder"></div>
+        </div>
+        <div>
+          <div class="an-h">Funnel — reached each stage</div>
+          <div id="funnel"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Prospects</h2>
+    <div class="toolbar">
+      <select id="stageFilter"><option value="">All stages</option></select>
+      <input class="inp" id="search" placeholder="search name / holder…" style="flex:1;min-width:120px">
+      <span class="pill info" id="rowsInfo">—</span>
+    </div>
+    <div class="body" style="max-height:none;padding:0">
+      <table>
+        <thead><tr>
+          <th>Name</th><th>Amount</th><th>Priority</th><th>Stage</th><th>Eligibility</th><th>Contact</th><th>Actions</th>
+        </tr></thead>
+        <tbody id="prospects"></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<dialog id="modal"><div class="dhead" id="mHead"></div><div class="dbody" id="mBody"></div>
+  <div class="dfoot" id="mFoot"></div></dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $=s=>document.querySelector(s), fmt=n=>'$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:0});
+let PROSPECTS=[];
+const KEY=()=>$('#apiKey').value.trim();
+$('#apiKey').value=localStorage.getItem('hb_key')||'';
+$('#apiKey').addEventListener('change',()=>localStorage.setItem('hb_key',KEY()));
+
+function toast(msg,ms=2600){const t=$('#toast');t.textContent=msg;t.classList.add('show');
+  clearTimeout(t._t);t._t=setTimeout(()=>t.classList.remove('show'),ms);}
+
+async function api(path,opts={}){
+  const o={headers:{},...opts};
+  if(opts.body){o.headers['Content-Type']='application/json';o.body=JSON.stringify(opts.body);}
+  if(opts.method&&opts.method!=='GET'&&KEY())o.headers['X-API-Key']=KEY();
+  const r=await fetch(path,o);
+  if(!r.ok){let d;try{d=await r.json()}catch{d={}};throw new Error(d.detail||r.status+' '+r.statusText);}
+  return r.status===204?null:r.json();
+}
+
+const STAGE_ORDER=["IDENTIFIED","ENRICHED","CONTACTED","RESPONDED","AGREEMENT_SENT","SIGNED","FILED","PAID","CLOSED","SUPPRESSED"];
+function eligPill(p){
+  if(p.suppression_status==='SUPPRESSED')return '<span class="pill danger">suppressed</span>';
+  if(p.eligibility_reviewed)return '<span class="pill ok">eligible ✓</span>';
+  if(p.custody_date)return '<span class="pill warn">ineligible</span>';
+  return '<span class="pill warn">unverified</span>';
+}
+
+async function loadAll(){
+  try{
+    const [sum,acts,work,ob,pros,an,pay]=await Promise.all([
+      api('/pipeline/summary'),api('/actions/today'),api('/verification/worklist'),
+      api('/outbox'),api('/prospects'),api('/analytics/summary'),api('/payments/dashboard')
+    ]);
+    $('#statusDot').classList.add('ok');$('#statusText').textContent='connected';
+    PROSPECTS=pros.prospects;
+    renderKpis(sum,pros.prospects,ob.outbox);
+    renderPipeline(sum);
+    renderActions(acts.actions);
+    renderWorklist(work.worklist);
+    renderOutbox(ob.outbox);
+    renderAnalytics(an);
+    renderCollections(pay);
+    renderStageFilter(sum);
+    renderProspects();
+  }catch(e){
+    $('#statusDot').classList.remove('ok');
+    $('#statusText').textContent='offline — start the server';
+    toast('Cannot reach API: '+e.message);
+  }
+}
+
+function renderKpis(sum,pros,ob){
+  const eligible=pros.filter(p=>p.eligibility_reviewed);
+  const eligVal=eligible.reduce((a,p)=>a+p.amount,0);
+  const awaiting=ob.filter(o=>o.status==='DRAFT'||o.status==='APPROVED').length;
+  const active=pros.filter(p=>p.suppression_status!=='SUPPRESSED').length;
+  const tiles=[
+    ['Active prospects',active,`${pros.length-active} suppressed`],
+    ['Published value',fmt(sum.total_pipeline_value),'not booked revenue'],
+    ['Eligible value',fmt(eligVal),`${eligible.length} verified · fee ≤ ${fmt(eligVal*0.1)}`],
+    ['Outbox awaiting',awaiting,'need your approval'],
+  ];
+  $('#kpis').innerHTML=tiles.map(([l,v,s])=>
+    `<div class="kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join('');
+}
+
+function renderPipeline(sum){
+  const st=sum.stages, max=Math.max(1,...Object.values(st).map(s=>s.count));
+  $('#pipeCount').textContent=sum.total_prospects;
+  $('#pipeline').innerHTML=STAGE_ORDER.filter(s=>st[s]).map(s=>{
+    const c=st[s].count,w=(c/max*100).toFixed(0);
+    return `<div class="stage ${s}"><span class="name">${s}</span>
+      <span class="bar" style="width:${Math.max(c?8:0,w)}%"></span>
+      <span class="n">${c}</span><span class="v">${c?fmt(st[s].value):''}</span></div>`;
+  }).join('')||'<div class="empty">No prospects yet</div>';
+}
+
+function renderActions(acts){
+  $('#actCount').textContent=acts.length;
+  $('#actions').innerHTML=acts.length?acts.map(a=>`
+    <div class="row"><div class="main">
+      <div class="nm">${esc(a.name)} <span class="amt">${fmt(a.amount)}</span></div>
+      <div class="meta">${esc(a.action)}</div>
+      <div class="meta">${a.stage} · ${a.stale_days}d · ${a.phone||a.email||'⚠ no contact'} · est. fee ${fmt(a.estimated_fee_if_recovered)}</div>
+    </div></div>`).join(''):'<div class="empty">✅ Nothing stale — pipeline is current.</div>';
+}
+
+function renderWorklist(w){
+  $('#verCount').textContent=w.length;
+  $('#worklist').innerHTML=w.length?w.map(r=>`
+    <div class="row"><div class="main">
+      <div class="nm">${esc(r.name)} <span class="amt">${fmt(r.amount)}</span></div>
+      <div class="meta">${esc(r.status)}</div>
+      <div class="meta">hint: report ${r.report_year_hint} · unlocks ≤ ${fmt(r.fee_if_eligible_and_recovered)} fee</div>
+      <div class="btns"><button onclick="verifyDlg('${r.property_id}','${esc(r.name)}')">Verify custody…</button></div>
+    </div></div>`).join(''):'<div class="empty">✅ All active records verified.</div>';
+}
+
+function renderOutbox(ob){
+  const pending=ob.filter(o=>o.status!=='SENT');
+  $('#obCount').textContent=ob.filter(o=>o.status==='DRAFT'||o.status==='APPROVED').length;
+  $('#outbox').innerHTML=ob.length?ob.slice().reverse().map(o=>{
+    const cls={DRAFT:'warn',APPROVED:'info',SENT:'ok',HELD:'danger'}[o.status]||'warn';
+    const p=PROSPECTS.find(x=>x.property_id===o.property_id)||{};
+    return `<div class="row"><div class="main">
+      <div class="nm">#${o.id} ${esc(p.name||o.property_id)} <span class="pill ${cls}">${o.status}</span></div>
+      <div class="meta">${o.channel} → ${esc(o.to_addr||'no address')} · ${esc((o.subject||o.body||'').slice(0,60))}</div>
+      <div class="btns">
+        ${o.status==='DRAFT'?`<button class="primary" onclick="approve(${o.id})">Approve</button>`:''}
+        <button onclick="viewDraft(${o.id})">View</button>
+      </div>
+    </div></div>`;}).join(''):'<div class="empty">No drafts queued. Queue one from a prospect below.</div>';
+  window._OB=ob;
+}
+
+function renderCollections(pay){
+  $('#colCount').textContent=fmt(pay.collected_fees)+' collected';
+  const parts=[];
+  if(pay.to_invoice.length){
+    parts.push('<div class="an-h">They got paid — send the invoice / thank-you</div>');
+    parts.push(pay.to_invoice.map(x=>`<div class="row"><div class="main">
+      <div class="nm">${esc(x.name)} <span class="amt">${fmt(x.fee)}</span>
+        <span class="pill ${x.mode==='GRATUITY'?'ok':'info'}">${x.mode==='GRATUITY'?'thank-you':'invoice'}</span></div>
+      <div class="btns"><button class="primary" onclick="invoiceFee('${x.property_id}')">Generate & open</button>
+        <button onclick="feePaid('${x.property_id}')">Mark fee paid</button></div>
+    </div></div>`).join(''));
+  }
+  if(pay.reminders_due.length){
+    parts.push('<div class="an-h" style="margin-top:12px">Gentle reminders due</div>');
+    parts.push(pay.reminders_due.map(x=>`<div class="row"><div class="main">
+      <div class="nm">${esc(x.name)} — reminder #${x.reminder_number} <span class="amt">${fmt(x.fee)}</span></div>
+      <div class="meta">${esc(x.message)}</div>
+      <div class="btns"><button onclick="remindSent('${x.property_id}')">Logged as sent</button>
+        <button onclick="feePaid('${x.property_id}')">Mark fee paid</button></div>
+    </div></div>`).join(''));
+  }
+  if(pay.awaiting_fee.length){
+    parts.push(`<div class="meta" style="margin-top:10px">${pay.awaiting_fee.length} invoiced, awaiting the fee.</div>`);
+  }
+  $('#collections').innerHTML=parts.join('')||
+    '<div class="empty">No open collections. When a claimant gets paid, mark it on their row and invoice here.</div>';
+}
+
+function renderAnalytics(an){
+  $('#narrative').innerHTML=an.narrative.map(s=>`<div class="ins">${esc(s)}</div>`).join('');
+  const vl=an.value_ladder, max=Math.max(1,vl.published_value);
+  const rungs=[
+    ['published','Published value',vl.published_value,'not revenue'],
+    ['eligible','Eligible value',vl.eligible_value,`${vl.eligible_pct_of_published}% of published`],
+    ['expected','Expected fee (10%)',vl.expected_fee,'if all eligible recover'],
+    ['realized','Realized fee',vl.realized_fee,'actually paid'],
+  ];
+  $('#ladder').innerHTML=rungs.map(([c,l,v,note])=>`
+    <div class="rung ${c}">
+      <div class="rtop"><span class="rl">${l} · <span style="opacity:.8">${note}</span></span><span class="rv">${fmt(v)}</span></div>
+      <div class="rbar" style="width:${Math.max(v?3:0,(v/max*100)).toFixed(1)}%"></div>
+    </div>`).join('');
+  const fmax=Math.max(1,...an.funnel.map(f=>f.reached));
+  $('#funnel').innerHTML=an.funnel.map((f,i)=>{
+    const leak=i>0 && f.step_conversion_pct<100 && f.reached>0;
+    const conv=i===0?'start':`${f.step_conversion_pct}%`;
+    return `<div class="fn ${leak?'leak':''}"><span class="fname">${f.stage}</span>
+      <span class="fbar" style="width:${Math.max(f.reached?6:0,(f.reached/fmax*100)).toFixed(0)}%"></span>
+      <span class="fn-n">${f.reached}</span><span class="fn-c">${conv}</span></div>`;
+  }).join('');
+}
+
+function renderStageFilter(sum){
+  const sel=$('#stageFilter'),cur=sel.value;
+  sel.innerHTML='<option value="">All stages</option>'+
+    STAGE_ORDER.filter(s=>sum.stages[s]&&sum.stages[s].count).map(s=>`<option value="${s}">${s} (${sum.stages[s].count})</option>`).join('');
+  sel.value=cur;
+}
+
+const TRACK_CLS={'FAST TRACK':'ok','SELF-SERVE NUDGE':'','VERIFY FIRST':'warn','SUPPRESSED':'danger'};
+function trackPill(t){const c=t&&t.startsWith('PREMIUM')?'info':(TRACK_CLS[t]??'');
+  return `<span class="pill ${c}">${esc(t||'—')}</span>`;}
+function renderProspects(){
+  const stage=$('#stageFilter').value, q=$('#search').value.toLowerCase();
+  let rows=PROSPECTS.filter(p=>(!stage||p.stage===stage)&&
+    (!q||(p.name||'').toLowerCase().includes(q)||(p.holder||'').toLowerCase().includes(q)));
+  rows.sort((a,b)=>(b.score-a.score)||(b.expected_fee-a.expected_fee));  // achievable-first
+  $('#rowsInfo').textContent=rows.length+' shown · ranked by priority (achievable first)';
+  $('#prospects').innerHTML=rows.length?rows.map(p=>{
+    const supp=p.suppression_status==='SUPPRESSED';
+    return `<tr>
+      <td><b>${esc(p.name)}</b><div class="meta" style="font-size:11px;color:var(--dim)">${esc(p.holder||'')} · ${esc(p.segment||'')}</div></td>
+      <td class="amt">${fmt(p.amount)}</td>
+      <td><div style="display:flex;flex-direction:column;gap:3px" title="${esc(p.reason||'')}">
+        <span class="amt">${(p.score??0).toFixed(0)} <span style="font-weight:400;color:var(--dim);font-size:11px">· est ${fmt(p.expected_fee)}</span></span>
+        ${trackPill(p.track)}</div></td>
+      <td><span class="pill ${supp?'danger':'info'}">${p.stage}</span></td>
+      <td>${eligPill(p)}</td>
+      <td>${p.phone||p.email?esc(p.phone||p.email):findChip(p)}</td>
+      <td><div class="btns">
+        <button onclick="findContact('${p.property_id}')" ${supp?'disabled':''} title="Skip-trace: find this person">🔎 Find</button>
+        <button onclick="toggleMode('${p.property_id}','${p.fee_model||p.mode||'CONTRACT'}')" ${supp?'disabled':''}
+          title="Toggle contract / gratuity">${(p.fee_model||p.mode)==='GRATUITY'?'🤝 Gratuity':'📄 Contract'}</button>
+        <button onclick="letter('${p.property_id}')" ${supp?'disabled':''}>Letter</button>
+        ${['SIGNED','FILED','PAID','CLOSED'].includes(p.stage)&&!p.funds_received_date?`<button onclick="fundsReceived('${p.property_id}')" title="Claimant received their money">💵 Got paid</button>`:''}
+        <button onclick="preview('${p.property_id}')" ${supp?'disabled':''}>Outreach</button>
+        <button onclick="draft('${p.property_id}')" ${supp||!(p.email)?'disabled':''}>Queue email</button>
+        <button class="danger" onclick="suppress('${p.property_id}')" ${supp?'disabled':''}>Suppress</button>
+      </div></td>
+    </tr>`;}).join(''):'<tr><td colspan="7" class="empty">No matching prospects</td></tr>';
+}
+$('#stageFilter').onchange=renderProspects; $('#search').oninput=renderProspects;
+
+// ── actions ──
+async function approve(id){try{await api('/outbox/approve',{method:'POST',body:{outbox_id:id,approver:'console'}});
+  toast('Approved #'+id);loadAll();}catch(e){toast(e.message);}}
+$('#sendBtn').onclick=async()=>{try{const r=await api('/outbox/send',{method:'POST',body:{daily_cap:50}});
+  toast(`Sent ${r.sent} (dry-run) · held ${r.held} · capped ${r.capped}`);loadAll();}catch(e){toast(e.message);}};
+async function draft(pid){try{const r=await api('/outbox/draft',{method:'POST',body:{property_id:pid,channel:'email'}});
+  toast('Draft #'+r.outbox_id+' queued — approve it in the outbox');loadAll();}catch(e){toast(e.message);}}
+async function toggleMode(pid,cur){const next=cur==='GRATUITY'?'CONTRACT':'GRATUITY';
+  try{await api('/prospects/mode',{method:'POST',body:{property_id:pid,fee_model:next}});
+    toast('Mode → '+next);loadAll();}catch(e){toast(e.message);}}
+async function letter(pid){try{const r=await api('/letter/generate',{method:'POST',body:{property_id:pid}});
+  toast(r.mode+' letter ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
+async function fundsReceived(pid){try{await api('/payments/funds-received',{method:'POST',body:{property_id:pid}});
+  toast('Marked: claimant received their money');loadAll();}catch(e){toast(e.message);}}
+async function invoiceFee(pid){try{const r=await api('/payments/invoice',{method:'POST',body:{property_id:pid}});
+  toast(r.kind+' ready — opening…');window.open(r.download,'_blank');loadAll();}catch(e){toast(e.message);}}
+async function feePaid(pid){if(!confirm('Record the fee as PAID? This closes the record as collected.'))return;
+  try{await api('/payments/fee-paid',{method:'POST',body:{property_id:pid}});toast('Fee collected 🎉');loadAll();}catch(e){toast(e.message);}}
+async function remindSent(pid){try{await api('/payments/reminder-sent',{method:'POST',body:{property_id:pid}});
+  toast('Reminder logged');loadAll();}catch(e){toast(e.message);}}
+function findChip(p){const f=Math.round(p.findability||0);
+  const cls=f>=70?'ok':f>=45?'warn':'danger';
+  return `<span class="pill ${cls}" title="Findability score">no contact · findable ${f}</span>`;}
+async function autoFill(pid){
+  try{const r=await api('/prospects/'+pid+'/enrich',{method:'POST'});
+    const got=(r.filled||[]);
+    if(!got.length){toast('No new contact found');return;}
+    toast((r.demo?'DEMO ':'')+'Filled '+got.join(' + ')+': '+(r.phone||r.email));
+    $('#modal').close();loadAll();
+  }catch(e){toast(e.message);}}
+async function findContact(pid){
+  try{const d=await api('/prospects/'+pid+'/find');
+    const strat=d.strategies.map(s=>`<div class="row"><div class="main">
+      <div class="nm"><a href="${s.url}" target="_blank" rel="noopener">${esc(s.label)}</a>
+        <span class="pill ${s.precision==='high'?'ok':s.precision==='medium'?'info':''}">${s.precision}</span></div>
+      <div class="meta">${esc(s.why)}</div></div></div>`).join('');
+    const tips=(d.tips||[]).map(t=>`<div class="meta" style="margin:4px 0">• ${esc(t)}</div>`).join('');
+    const flabel=d.findability>=70?'ok':d.findability>=45?'warn':'danger';
+    modal(`Find ${esc(d.display_name)}`,
+      `<div style="margin-bottom:10px">
+         <span class="pill ${flabel}">findability ${Math.round(d.findability)} · ${esc(d.findability_label)}</span>
+         ${d.deceased_likely?'<span class="pill danger">deceased → find heirs</span>':''}
+         ${d.is_entity?'<span class="pill info">entity → find officer</span>':''}
+       </div>
+       <div class="btns" style="margin-bottom:12px">
+         <button class="primary" onclick="autoFill('${pid}')">⚡ Auto-fill phone/email</button>
+         <span class="meta" style="align-self:center">uses your data provider — demo data until a key is set</span>
+       </div>
+       <div class="meta" style="margin-bottom:12px">Name variants to try: <b>${(d.parsed.variants||[]).map(esc).join(' · ')}</b></div>
+       ${tips}${strat}`,
+      [['Close','',()=>$('#modal').close()]]);
+  }catch(e){toast(e.message);}}
+async function suppress(pid){if(!confirm('Suppress this record? This is terminal — no further outreach.'))return;
+  try{await api('/crm/suppress',{method:'POST',body:{property_id:pid,reason:'console'}});toast('Suppressed');loadAll();}catch(e){toast(e.message);}}
+
+async function preview(pid){try{const s=await api('/outreach/generate',{method:'POST',body:{property_id:pid}});
+  modal('Outreach preview — fee '+s.fee_pct+'%',
+    `<label class="f">Cold email</label><pre>${esc(s.cold_email)}</pre>
+     <label class="f">SMS</label><pre>${esc(s.sms_opener)}</pre>`,
+    [['Close','',()=>$('#modal').close()]]);}catch(e){toast(e.message);}}
+
+function viewDraft(id){const o=(window._OB||[]).find(x=>x.id===id);if(!o)return;
+  modal('Outbox #'+id+' · '+o.status,`<label class="f">To</label><pre>${esc(o.to_addr||'—')}</pre>
+    ${o.subject?`<label class="f">Subject</label><pre>${esc(o.subject)}</pre>`:''}
+    <label class="f">Body</label><pre>${esc(o.body||'')}</pre>`,
+    [['Close','',()=>$('#modal').close()]]);}
+
+function verifyDlg(pid,name){
+  modal('Verify custody — '+name,
+    `<p style="font-size:12px;color:var(--dim);margin:0 0 4px">Look up the property at
+       <b>revenue.wi.gov/Pages/UnclaimedProperty</b>, confirm the date it entered DOR custody,
+       then record it with evidence. Eligible only if ≥ 24 months.</p>
+     <label class="f">Custody date (YYYY-MM-DD)</label><input id="vDate" placeholder="2021-03-01">
+     <label class="f">Evidence (how you confirmed it) — required</label>
+     <textarea id="vEv" rows="2" placeholder="WI DOR portal lookup 2026-08-08; screenshot in Drive/…"></textarea>`,
+    [['Cancel','',()=>$('#modal').close()],
+     ['Record verification','primary',async()=>{
+       const d=$('#vDate').value.trim(),ev=$('#vEv').value.trim();
+       if(!d||!ev){toast('Date and evidence are both required');return;}
+       try{const r=await api('/crm/eligibility',{method:'POST',
+         body:{property_id:pid,custody_date:d,reviewed:true,reviewer:'console',evidence:ev}});
+         $('#modal').close();
+         toast(r.eligibility.eligible?'Eligible ✓ — agreement now unlocked':'Recorded — still ineligible: '+r.eligibility.reason);
+         loadAll();}catch(e){toast(e.message);}
+     }]]);}
+
+function modal(head,body,foot){$('#mHead').textContent=head;$('#mBody').innerHTML=body;
+  $('#mFoot').innerHTML='';foot.forEach(([label,cls,fn])=>{const b=document.createElement('button');
+    b.textContent=label;if(cls)b.className=cls;b.onclick=fn;$('#mFoot').appendChild(b);});$('#modal').showModal();}
+
+function esc(s){return String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+$('#refreshBtn').onclick=loadAll;
+$('#importBtn').onclick=()=>$('#csvFile').click();
+$('#csvFile').onchange=async(e)=>{
+  const f=e.target.files[0]; if(!f)return;
+  const fd=new FormData(); fd.append('file',f);
+  const h={}; if(KEY())h['X-API-Key']=KEY();
+  toast('Importing '+f.name+' …',8000);
+  try{
+    const r=await fetch('/seed/csv?min_amount=0&max_rows=5000',{method:'POST',headers:h,body:fd});
+    const d=await r.json();
+    if(!r.ok) throw new Error(d.detail||('HTTP '+r.status));
+    toast(`Imported ${d.added} new · ${d.skipped} dupes · ${d.total_candidates} rows in file`,6000);
+    loadAll();
+  }catch(err){toast('Import failed: '+err.message,7000);}
+  e.target.value='';
+};
+loadAll();
+setInterval(loadAll,20000);
+</script>
+</body>
+</html>

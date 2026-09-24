@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Odin - No Debt. Real Skills. Get Hired.</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+
+        header {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 1rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 24px;
+        }
+
+        .logo h1 {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2d3748;
+        }
+
+        .logo p {
+            font-size: 12px;
+            color: #718096;
+            font-weight: 600;
+        }
+
+        nav {
+            display: flex;
+            gap: 2rem;
+        }
+
+        nav a {
+            color: #4a5568;
+            text-decoration: none;
+            font-weight: 600;
+            padding: 8px 16px;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        nav a:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .hero {
+            background: white;
+            border-radius: 20px;
+            padding: 3rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+            text-align: center;
+        }
+
+        .hero h2 {
+            font-size: 48px;
+            font-weight: bold;
+            color: #2d3748;
+            margin-bottom: 1rem;
+        }
+
+        .hero p {
+            font-size: 20px;
+            color: #718096;
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .xp-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            padding: 2rem;
+            color: white;
+            max-width: 400px;
+            margin: 0 auto;
+        }
+
+        .xp-card h3 {
+            font-size: 64px;
+            font-weight: bold;
+            margin: 0;
+        }
+
+        .xp-label {
+            font-size: 14px;
+            opacity: 0.9;
+            margin-bottom: 8px;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transition: transform 0.2s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-icon {
+            font-size: 32px;
+            margin-bottom: 12px;
+        }
+
+        .card h4 {
+            color: #2d3748;
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .card-label {
+            font-size: 14px;
+            color: #a0aec0;
+            margin-top: 8px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+
+        .section {
+            background: white;
+            border-radius: 15px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .section h3 {
+            color: #2d3748;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: rgba(255,255,255,0.8);
+            font-size: 14px;
+        }
+
+        .status {
+            background: #48bb78;
+            color: white;
+            padding: 0.5rem 1rem;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">O</div>
+                <div>
+                    <h1>Odin</h1>
+                    <p>CAREER INTELLIGENCE</p>
+                </div>
+            </div>
+            <nav>
+                <a href="#home">Dashboard</a>
+                <a href="#about">About</a>
+            </nav>
+        </div>
+    </header>
+
+    <main>
+        <div class="hero">
+            <h2>Welcome to Odin Platform</h2>
+            <p>No Debt. Real Skills. Get Hired.</p>
+            
+            <div class="xp-card">
+                <p class="xp-label">TOTAL EXPERIENCE</p>
+                <h3 id="xp-display">0</h3>
+                <p>XP Points</p>
+            </div>
+
+            <div class="status" id="api-status">
+                🔄 Checking API connection...
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-icon">📚</div>
+                <h4>Courses</h4>
+                <p class="card-value" id="courses-count">0</p>
+                <p class="card-label">Completed</p>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">🏆</div>
+                <h4>Badges</h4>
+                <p class="card-value" id="badges-count">0</p>
+                <p class="card-label">Earned</p>
+            </div>
+
+            <div class="card">
+                <div class="card-icon">✅</div>
+                <h4>Quizzes</h4>
+                <p class="card-value" id="quizzes-count">0</p>
+                <p class="card-label">Completed</p>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>Earn More XP</h3>
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="addXP(10)">
+                    Complete Lesson (+10 XP)
+                </button>
+                <button class="btn btn-primary" onclick="addXP(50)">
+                    Finish Course (+50 XP)
+                </button>
+                <button class="btn btn-primary" onclick="addXP(100)">
+                    Get Hired (+100 XP)
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Odin Platform • Career Intelligence System • v1.0.0</p>
+        <p>Connected to: <span id="api-url">https://eduquest-xp-api.onrender.com</span></p>
+    </footer>
+
+    <script>
+        const API_URL = 'https://eduquest-xp-api.onrender.com';
+        let currentXP = 0;
+
+        async function checkAPI() {
+            try {
+                const response = await fetch(`${API_URL}/api/health`);
+                const data = await response.json();
+                
+                if (data.ok) {
+                    document.getElementById('api-status').innerHTML = '✅ API Connected';
+                    document.getElementById('api-status').style.background = '#48bb78';
+                    loadXPData();
+                } else {
+                    throw new Error('API health check failed');
+                }
+            } catch (error) {
+                console.error('API connection error:', error);
+                document.getElementById('api-status').innerHTML = '⚠️ API Offline (using demo mode)';
+                document.getElementById('api-status').style.background = '#ed8936';
+            }
+        }
+
+        async function loadXPData() {
+            try {
+                const response = await fetch(`${API_URL}/api/xp`);
+                const data = await response.json();
+                
+                currentXP = data.xp || 0;
+                document.getElementById('xp-display').textContent = currentXP;
+                document.getElementById('badges-count').textContent = data.badges?.length || 0;
+                document.getElementById('quizzes-count').textContent = data.quizzesTaken?.length || 0;
+            } catch (error) {
+                console.error('Error loading XP:', error);
+            }
+        }
+
+        async function addXP(points) {
+            currentXP += points;
+            document.getElementById('xp-display').textContent = currentXP;
+
+            try {
+                await fetch(`${API_URL}/api/xp`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        xp: currentXP,
+                        badges: [],
+                        quizzesTaken: []
+                    })
+                });
+            } catch (error) {
+                console.error('Error updating XP:', error);
+            }
+        }
+
+        // Initialize
+        checkAPI();
+    </script>
+</body>
+</html>

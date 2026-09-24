@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Verify Your Unclaimed Property — Wisconsin</title>
+<style>
+  :root{
+    --bg:#f3f2ee; --card:#fff; --ink:#201e19; --dim:#6d665a; --border:#e5dfd2;
+    --accent:#1a7f44; --accent-bg:#e7f3ec; --blue:#245e9c; --blue-bg:#e8f0f8;
+    --amber:#8a5a00; --shadow:0 1px 2px rgba(0,0,0,.05),0 10px 30px rgba(0,0,0,.06);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --bg:#131217; --card:#1e1d23; --ink:#ece9e3; --dim:#9b948a; --border:#332f3a;
+    --accent:#4bbd78; --accent-bg:#16281d; --blue:#6ba6e6; --blue-bg:#152232;
+    --amber:#e0a441; --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 34px rgba(0,0,0,.3);
+  }}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    display:flex;flex-direction:column;align-items:center;min-height:100vh;padding:32px 18px 60px}
+  .wrap{width:100%;max-width:620px}
+  .kicker{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:center}
+  h1{font-size:26px;line-height:1.25;text-align:center;margin:8px 0 6px;font-weight:680}
+  .lede{text-align:center;color:var(--dim);margin:0 auto 26px;max-width:500px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:16px;
+    box-shadow:var(--shadow);padding:26px 26px 24px;margin-bottom:18px}
+  .record{display:grid;grid-template-columns:1fr 1fr;gap:14px 20px;margin-top:4px}
+  .record .f .l{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim)}
+  .record .f .v{font-size:16px;font-weight:600;margin-top:2px}
+  .record .amount .v{font-size:30px;color:var(--accent);font-weight:720}
+  .record .full{grid-column:1/-1}
+  .free{background:var(--accent-bg);border:1px solid transparent;border-radius:14px;
+    padding:20px 22px;margin-bottom:18px}
+  .free h2{margin:0 0 6px;font-size:18px;color:var(--accent)}
+  .free p{margin:0 0 14px;font-size:15px}
+  .free a.state{display:inline-flex;align-items:center;gap:8px;background:var(--accent);color:#fff;
+    text-decoration:none;font-weight:600;padding:11px 18px;border-radius:10px;font-size:15px}
+  .free .phone{margin-top:10px;font-size:14px;color:var(--dim)}
+  .help{border:1px solid var(--border);border-radius:14px;padding:20px 22px;margin-bottom:18px}
+  .help h3{margin:0 0 8px;font-size:16px}
+  .help ul{margin:0 0 16px;padding-left:18px;color:var(--dim);font-size:14.5px}
+  .help li{margin:4px 0}
+  .help li b{color:var(--ink)}
+  .row{display:flex;gap:12px;flex-wrap:wrap}
+  button{font:inherit;font-size:15px;font-weight:600;border-radius:10px;padding:11px 18px;cursor:pointer;border:1px solid var(--border)}
+  .b-help{background:var(--blue);border-color:var(--blue);color:#fff}
+  .b-ghost{background:transparent;color:var(--dim)}
+  .b-ghost:hover{color:var(--ink)}
+  .foot{text-align:center;font-size:12.5px;color:var(--dim);line-height:1.6;margin-top:8px}
+  .msg{text-align:center;padding:30px 10px;color:var(--dim)}
+  .done{background:var(--accent-bg);border-radius:14px;padding:22px;text-align:center}
+  .done h2{margin:0 0 6px;color:var(--accent);font-size:19px}
+  .badge{display:inline-block;font-size:12px;color:var(--blue);background:var(--blue-bg);
+    border-radius:20px;padding:3px 12px;margin-bottom:14px}
+  @media(max-width:520px){.record{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="kicker">State of Wisconsin · Unclaimed Property</div>
+  <h1 id="hTitle">Verifying your record…</h1>
+  <p class="lede" id="hLede"></p>
+  <div id="app"><div class="msg">Loading…</div></div>
+  <div class="foot" id="foot"></div>
+</div>
+
+<script>
+const $=s=>document.querySelector(s), fmt=n=>'$'+Number(n||0).toLocaleString(undefined,{maximumFractionDigits:2});
+const token=new URLSearchParams(location.search).get('id')||'';
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function load(){
+  if(!token){show(`<div class="msg">This link is missing its record code. Please use the exact link from your letter or email.</div>`);
+    $('#hTitle').textContent='Verify your record';return;}
+  try{
+    const d=await (await fetch('/owner/'+encodeURIComponent(token))).json();
+    if(d.detail){throw new Error(d.detail);}
+    render(d);
+  }catch(e){
+    $('#hTitle').textContent='We couldn’t find that record';
+    show(`<div class="msg">No record matched this link. You can still check for yourself, free, at
+      <a href="https://revenue.wi.gov/Pages/UnclaimedProperty" target="_blank" rel="noopener">revenue.wi.gov</a>.</div>`);
+  }
+}
+
+function render(d){
+  if(d.suppressed){$('#hTitle').textContent='You’ve opted out';
+    show(`<div class="done"><h2>Done — you won’t hear from us again.</h2>
+      <p>If you’d like, you can still claim any property yourself for free at
+      <a href="https://${d.state_portal}" target="_blank" rel="noopener">${d.state_portal}</a>.</p></div>`);
+    return;}
+  $('#hTitle').textContent=`Hi ${esc(d.first_name)||'there'} — this may be yours to claim.`;
+  $('#hLede').textContent='Unclaimed property is a real, government-run program. Here’s the record in your name, and exactly how to claim it — for free.';
+  show(`
+    <div class="card">
+      <div class="badge">Record on file with the Wisconsin Department of Revenue</div>
+      <div class="record">
+        <div class="f amount full"><div class="l">Approximate amount</div><div class="v">${fmt(d.amount)}</div></div>
+        <div class="f"><div class="l">Originally from</div><div class="v">${esc(d.holder)||'—'}</div></div>
+        <div class="f"><div class="l">Type</div><div class="v">${esc(d.property_type)||'—'}</div></div>
+        <div class="f"><div class="l">Last known area</div><div class="v">${esc(d.city)||'Wisconsin'}</div></div>
+        <div class="f"><div class="l">Reference</div><div class="v">${esc(d.property_id)}</div></div>
+      </div>
+    </div>
+
+    <div class="free">
+      <h2>You can claim this yourself — free</h2>
+      <p>This is your money. The State of Wisconsin is holding it for you, and you can claim it
+         directly at no cost. You don’t need us or anyone else.</p>
+      <a class="state" href="https://${d.state_portal}" target="_blank" rel="noopener">Claim it free at the state ↗</a>
+      <div class="phone">or call the state directly: ${esc(d.state_phone)}</div>
+    </div>
+
+    <div class="help">
+      <h3>Prefer that we handle the paperwork?</h3>
+      <ul>
+        <li><b>${d.fee_pct}% fee, only if you’re actually paid.</b> The maximum Wisconsin allows.</li>
+        <li><b>In writing first.</b> We agree the fee on a one-page form before anything happens.</li>
+        <li><b>No upfront cost, cancel anytime.</b> If you’re not paid, you owe nothing.</li>
+        <li>We are a private locator service — <b>not the State of Wisconsin</b> or any government agency.</li>
+      </ul>
+      <div class="row">
+        <button class="b-help" onclick="requestHelp()">Yes, I’d like help</button>
+        <button class="b-ghost" onclick="notMe()">This isn’t me / stop contacting me</button>
+      </div>
+    </div>`);
+  $('#foot').innerHTML='Your information is used only to help you claim this specific property. '+
+    'We never ask for your Social Security number or bank details to look up a record — the official claim is filed with the state.';
+}
+
+async function requestHelp(){
+  try{await fetch('/owner/'+encodeURIComponent(token)+'/request-help',{method:'POST'});
+    $('#hTitle').textContent='Thank you — we’ll be in touch.';$('#hLede').textContent='';
+    show(`<div class="done"><h2>Got it.</h2>
+      <p>We’ll reach out with the simple, one-page agreement and the exact steps. There’s no cost
+         unless you’re actually paid — and you can still claim it yourself for free anytime at
+         <a href="https://revenue.wi.gov/Pages/UnclaimedProperty" target="_blank" rel="noopener">the state site</a>.</p></div>`);
+    $('#foot').innerHTML='';
+  }catch(e){alert('Something went wrong — please try again.');}
+}
+async function notMe(){
+  try{await fetch('/owner/'+encodeURIComponent(token)+'/not-me',{method:'POST'});
+    $('#hTitle').textContent='Done — our apologies for the interruption.';$('#hLede').textContent='';
+    show(`<div class="done"><h2>You’re removed.</h2>
+      <p>You won’t hear from us again. It’s still worth searching your own name at
+         <a href="https://revenue.wi.gov/Pages/UnclaimedProperty" target="_blank" rel="noopener">the state site</a> —
+         many people have small amounts they don’t know about.</p></div>`);
+    $('#foot').innerHTML='';
+  }catch(e){alert('Something went wrong — please try again.');}
+}
+function show(html){$('#app').innerHTML=html;}
+load();
+</script>
+</body>
+</html>
