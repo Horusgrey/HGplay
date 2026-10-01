@@ -529,16 +529,16 @@
   </footer>
 
 <script>
-  // ── DEMO DATA (replace with live Google Sheets / API feed) ──
+  // ── DEMO DATA — synthetic only (PRJ-HB7K4: no real owner data in prototypes) ──
   const prospects = [
-    { name: 'Lorraine J. Vasser', city: 'Milwaukee', type: 'Life Insurance Benefit', amount: 744236.68, tier: 'ultra' },
-    { name: 'Yuming Gao', city: 'Waukesha', type: 'Investment Liquidation', amount: 693857.10, tier: 'ultra' },
-    { name: 'Jacqueline K. Ohman', city: 'Milwaukee', type: 'Investment Liquidation', amount: 340274.92, tier: 'ultra' },
-    { name: 'Lucille Kelly', city: 'Baldwin', type: 'Beneficiary Proceeds', amount: 316987.62, tier: 'ultra' },
-    { name: 'Walter T. Iverson', city: 'Coleman', type: "Cashier's Check", amount: 296501.90, tier: 'ultra' },
-    { name: 'Gokhan Kiyak', city: 'Franklin', type: 'Checking Account', amount: 296308.99, tier: 'ultra' },
-    { name: 'John Hoover', city: 'Hudson', type: 'Outstanding Checks', amount: 283265.10, tier: 'ultra' },
-    { name: 'William L. Pierce', city: 'Hayward', type: 'Investment Liquidation', amount: 264591.54, tier: 'ultra' },
+    { name: 'Loretta J. Samplewood', city: 'Milwaukee', type: 'Life Insurance Benefit', amount: 744236.68, tier: 'ultra' },
+    { name: 'Yusra Placeholt', city: 'Waukesha', type: 'Investment Liquidation', amount: 693857.10, tier: 'ultra' },
+    { name: 'Jacinda K. Testbourne', city: 'Milwaukee', type: 'Investment Liquidation', amount: 340274.92, tier: 'ultra' },
+    { name: 'Lucinda Mockley', city: 'Baldwin', type: 'Beneficiary Proceeds', amount: 316987.62, tier: 'ultra' },
+    { name: 'Walton T. Dummerfield', city: 'Coleman', type: "Cashier's Check", amount: 296501.90, tier: 'ultra' },
+    { name: 'Milo Thackeray', city: 'Franklin', type: 'Checking Account', amount: 296308.99, tier: 'ultra' },
+    { name: 'Dustin Fauxhart', city: 'Hudson', type: 'Outstanding Checks', amount: 283265.10, tier: 'ultra' },
+    { name: 'Wilhelmina L. Piercefield', city: 'Hayward', type: 'Investment Liquidation', amount: 264591.54, tier: 'ultra' },
   ];
 
   const activity = [
@@ -551,10 +551,10 @@
   ];
 
   const actions = [
-    { type: 'High-Value Call', desc: 'Phone Lorraine Vasser ($744K) — white-glove tier', meta: 'Ultra-high priority · 20% fee = $148,847' },
-    { type: 'Follow-Up Due', desc: '12 prospects need 2nd follow-up email', meta: 'Auto-sends at 10:00 AM' },
-    { type: 'Response Waiting', desc: '3 INTERESTED replies need claim instructions', meta: 'Auto-handled · review optional' },
-    { type: 'Payment Reminder', desc: '2 claims 60+ days old — fee reminder queued', meta: 'Sends at 5:00 PM' },
+    { type: 'High-Value Call', desc: 'Phone Loretta Samplewood ($744K) — white-glove tier', meta: 'Ultra-high priority · gratuity or 10% contract (WI cap)' },
+    { type: 'Follow-Up Due', desc: '12 prospects need their one allowed follow-up', meta: 'Queued for operator approval · nothing auto-sends' },
+    { type: 'Response Waiting', desc: '3 INTERESTED replies need claim instructions', meta: 'Drafted · awaiting human review before send' },
+    { type: 'Payment Reminder', desc: '2 claims 60+ days old — fee reminder queued', meta: 'Queued for operator approval · nothing auto-sends' },
   ];
 
   // Metrics
@@ -583,7 +583,7 @@
   document.getElementById('pipelineValue').innerHTML =
     '$' + parseInt(parts[0].replace(/,/g,'')).toLocaleString() + '<span class="cents">.' + parts[1] + '</span>';
   document.getElementById('recordCount').textContent = '1,284';
-  document.getElementById('estFees').textContent = money(fullPipeline * 0.12);
+  document.getElementById('estFees').textContent = money(fullPipeline * 0.10); // WI cap — see compliance.py
 
   document.getElementById('emailsSent').textContent = metrics.emailsSent;
   document.getElementById('responses').textContent = metrics.responses;
@@ -601,18 +601,19 @@
   document.getElementById('cClaimed').textContent = (metrics.claimsFiled/metrics.interested*100).toFixed(0) + '% conv';
   document.getElementById('cPaid').textContent = (metrics.paid/metrics.claimsFiled*100).toFixed(0) + '% conv';
 
-  // Prospects
-  const feeRate = { ultra: 0.20, high: 0.15 };
+  // Prospects — fee estimate is the WI statutory ceiling (compliance.WI_FEE_CAP), never a
+  // negotiated or tiered figure. Most letters go out in GRATUITY mode with no fee at all.
+  const feeRate = { ultra: 0.10, high: 0.10 };
   document.getElementById('prospectList').innerHTML = prospects.map(p => `
     <div class="prospect">
       <div>
-        <span class="tier-tag tier-${p.tier}">${p.tier === 'ultra' ? 'Ultra · 20%' : 'High · 15%'}</span>
+        <span class="tier-tag tier-${p.tier}">${p.tier === 'ultra' ? 'Ultra · 10% cap' : 'High · 10% cap'}</span>
         <div class="name">${p.name}</div>
         <div class="meta">${p.city}, WI · ${p.type}</div>
       </div>
       <div>
         <div class="amount">$${moneyFull(p.amount)}</div>
-        <div class="fee">est. fee ${money(p.amount * feeRate[p.tier])}</div>
+        <div class="fee">max. fee (CONTRACT mode) ${money(p.amount * feeRate[p.tier])}</div>
       </div>
     </div>
   `).join('');

@@ -8,7 +8,7 @@ def test_mock_provider_is_default_without_key(monkeypatch):
 
 
 def test_mock_result_is_flagged_demo():
-    r = skiptrace.trace({"name": "Gokhan Kiyak",
+    r = skiptrace.trace({"name": "Milo Thackeray",
                          "last_known_address": "1 A St, Franklin, WI 53132"},
                         provider=skiptrace.MockProvider())
     assert r.demo is True and r.phone and "@" in r.email
@@ -22,7 +22,7 @@ def test_mock_is_deterministic():
 
 
 def test_enrich_writes_contact_and_advances(crm):
-    crm.add_prospect({"property_id": "K1", "name": "Gokhan Kiyak",
+    crm.add_prospect({"property_id": "K1", "name": "Milo Thackeray",
                       "last_known_address": "8459 S River Terrace Dr, Franklin, WI 53132"})
     res = skiptrace.enrich(crm, "K1", provider=skiptrace.MockProvider())
     assert res["success"] and "phone" in res["filled"]

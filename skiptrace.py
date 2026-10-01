@@ -166,7 +166,7 @@ def enrich(crm, property_id: str, provider: SkipTraceProvider | None = None) -> 
 
 
 if __name__ == "__main__":
-    demo = {"property_id": "1", "name": "Gokhan Kiyak",
+    demo = {"property_id": "1", "name": "Milo Thackeray",
             "last_known_address": "8459 S River Terrace Dr, Franklin, WI 53132"}
     print("provider:", get_provider().name)
     print(json.dumps(trace(demo).as_dict(), indent=2))

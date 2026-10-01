@@ -21,7 +21,7 @@ def test_institutional_claimants_are_business_not_people():
 
 
 def test_ordinary_people_are_still_owners():
-    for person in ["Jane Q. Public", "Gokhan Kiyak", "Mary Spies",
+    for person in ["Jane Q. Public", "Milo Thackeray", "Mary Spies",
                    "Eudora Keeton", "Michael Hershberger"]:
         assert scoring.segment({"name": person}) == "OWNER", person
 
