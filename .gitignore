@@ -3,6 +3,7 @@ __pycache__/
 *.pyc
 heirbud.db
 heirbud.db-journal
+backups/
 contracts/
 letters/
 TODAY_ACTIONS.md

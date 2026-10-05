@@ -28,10 +28,13 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `reply_classifier.py` | Rule-based inbound-reply sorting + safe auto-actions |
 | `outbox.py` | Approve-to-send queue with pluggable sender (dry-run default) |
 | `heirbud_server.py` | FastAPI backend — optional API key, eligibility + suppress endpoints |
+| `backup_restore.py` | SQLite backup/restore via the online backup API — tested recovery path |
 | `demo_pilot.py` | **One-command end-to-end pilot** on synthetic data — proves every gate |
 | `fixtures/synthetic_wi_records.csv` | 31 fake WI records (incl. a multi-claim person, a family with an estate, and an institutional claimant) |
-| `tests/` | 154 pytest cases locking every compliance gate and the household graph |
+| `tests/` | 157 pytest cases locking every compliance gate, the household graph, and backup/restore |
 | `requirements.txt` | Python deps |
+| `VERSION.md` | Canonical release declaration (v1.0.0) |
+| `.env.example` | Every secret/config the server reads from the environment |
 
 ### Frontends
 | File | Purpose |
@@ -39,9 +42,9 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `heirbud_command_center.html` | **⭐ Standalone browser app** — CSV column mapper, auto-eligibility, ranking, households, operator identity, batch letter printing, invoices, CSV export. localStorage only; nothing leaves the device |
 | `heirbud_console.html` | **Operator console** — served at `/`, pipeline/worklist/outbox/actions/analytics/priority |
 | `owner_portal.html` | **Owner trust page** — served at `/verify`, proof-first self-service |
-| `heirfinder_v1.html` | Standalone tool (localStorage, AI enrichment) |
-| `heirbud_v2.html` | Earlier dashboard (connects to FastAPI) |
-| `heirbud_command_deck.html` | Command-deck interface |
+
+`archive/frontends/` holds three superseded builds (`heirfinder_v1.html`,
+`heirbud_v2.html`, `heirbud_command_deck.html`) — see `archive/README.md`.
 
 ### Docs
 | File | Purpose |
@@ -49,8 +52,11 @@ Compliance-first (PRJ-HB7K4). Start with `AUTONOMOUS_SYSTEM.md`, then `README.md
 | `STRATEGY.md` | Business strategy — trust-as-moat, segmentation, expansion, unit economics, funding the portfolio |
 | `AUTONOMOUS_SYSTEM.md` | The autonomous money-maker design + revenue model |
 | `docs/LEGAL_REVIEW_BRIEF.md` | Scope-of-review brief to hand a Wisconsin attorney |
+| `docs/LAUNCH_RUNBOOK.md` | The ordered list of what's left — and whose job each item is |
+| `docs/DATA_SCHEMA.md` | Full CRM/outbox schema reference |
 | `docs/EMAIL_TEMPLATE_LIBRARY.md` | Proof-first outreach copy + deliverability rules |
 | `docs/LEGAL_TEMPLATES_COMPLIANCE.md` | Per-state agreement templates + compliance ref |
+| `docs/MULTI_STATE_EXPANSION_MONETIZATION.md` | How growth should work once Wisconsin is proven |
 | `docs/governance/HB-00_START_HERE.md` | Project mission + operating rules |
 | `docs/governance/HB-00_SCOPE_AUDIT.md` | Whole-project assessment + launch blockers |
 | `docs/governance/HB-00_MASTER_CONTROL.md` | Deliverable / risk / decision tracker (+ repo status) |

@@ -9,9 +9,11 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 > architecture, **`docs/LEGAL_REVIEW_BRIEF.md`** for the lawyer hand-off, and
 > **`docs/governance/`** for the project canon (Start Here, Scope Audit, Master Control).
 >
-> Status: **prototype — run locally on synthetic data.** Legal sign-off, real
-> auth, and a supervised pilot are required before live paid outreach. See the
-> Master Control deliverable tracker.
+> Status: **v1.0.0 — engineering complete, legal sign-off pending.** Every
+> code-level compliance gate is implemented and tested. The only remaining
+> blocker before live outreach is a Wisconsin attorney's review — see
+> `VERSION.md` and `docs/LAUNCH_RUNBOOK.md` for exactly what's left and
+> whose job each item is.
 
 ## Frontends
 
@@ -20,9 +22,10 @@ Wisconsin unclaimed-property finder and CRM pipeline for ZGroup LLC.
 | `heirbud_command_center.html` | **⭐ The one you actually run.** The whole engine as a single browser file — no Python, no server, no install. Import any CSV (it maps your column names for you), and eligibility, ranking, households, letters, invoices and collections all populate on their own. Your details fill every document — nothing prints with a placeholder. Data stays in the browser and never leaves the device. |
 | `heirbud_console.html` | **Operator console** — served same-origin by the server at `/`. Pipeline, today's actions, verification worklist, approve-to-send outbox, prioritized prospect table, funnel analytics. Theme-aware. |
 | `owner_portal.html` | **Owner-facing trust page** — served at `/verify?id=…`. Owners verify their own record, see the free state path front-and-center, opt in or opt out. |
-| `heirfinder_v1.html` | Standalone single-file tool — AI enrichment, outreach emails, localStorage. No server. |
-| `heirbud_v2.html` | Earlier dashboard — connects to the FastAPI backend, CSV import, batch outreach, pipeline. |
-| `heirbud_command_deck.html` | Command-deck interface (compliance-aware build). |
+
+Three earlier frontends (`heirfinder_v1.html`, `heirbud_v2.html`,
+`heirbud_command_deck.html`) are superseded and now live in `archive/` —
+see `archive/README.md` for why each one was retired.
 
 ### Operator console
 
@@ -57,14 +60,18 @@ where the server has `HEIRBUD_API_KEY` set, gated by the key field in the header
 | `payment_module.py` | Closes the money loop — mode-aware invoice/thank-you, friendly finite reminders, reconciliation |
 | `reply_classifier.py` | Rule-based inbound-reply sorting — auto-suppress opt-outs, flag real leads |
 | `outbox.py` | Approve-to-send queue — nothing sends without human approval (dry-run sender) |
-| `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering v2 |
+| `heirbud_server.py` | FastAPI server (optional `X-API-Key`, CORS allowlist) powering the console |
+| `backup_restore.py` | Consistent DB snapshot + restore (tested recovery — see `tests/test_backup_restore.py`) |
 
 ## Docs
 
 | File | What it is |
 |------|-----------|
+| `VERSION.md` | The canonical release declaration — what v1.0.0 means and doesn't mean |
 | `AUTONOMOUS_SYSTEM.md` | The autonomous money-maker design: automate the clerical 90%, gate the regulated 10% |
 | `CATALOG.md` | Index of every file across all projects in this repo |
+| `docs/DATA_SCHEMA.md` | The full CRM/outbox schema — every column, every table |
+| `docs/LAUNCH_RUNBOOK.md` | **The remaining steps — and they're yours, not code's** |
 | `docs/EMAIL_TEMPLATE_LIBRARY.md` | Proof-first outreach copy + deliverability rules |
 | `docs/LEGAL_TEMPLATES_COMPLIANCE.md` | Per-state agreement templates + compliance reference |
 | `docs/governance/` | PRJ-HB7K4 canon: Start Here, Scope Audit, Master Control |
@@ -94,10 +101,13 @@ python seed_from_csv.py --file your_wi_export.csv --min-amount 50000
 export HEIRBUD_API_KEY=changeme            # optional but recommended
 uvicorn heirbud_server:app --reload --port 8001
 
-# Open heirbud_v2.html (or heirfinder_v1.html for the standalone tool)
+# Open http://localhost:8001/ (the console) or heirbud_command_center.html directly
 
 # Every morning — the autonomy layer
 python followup_engine.py
+
+# Periodically — back up the live database
+python backup_restore.py backup
 ```
 
 ## Compliance gates (enforced in code)
@@ -143,7 +153,7 @@ records can never be resurrected by auto-advance.
 ## Tests
 
 ```bash
-python -m pytest tests/ -q     # 48 tests locking every compliance gate
+python -m pytest tests/ -q     # 157 tests locking every compliance gate
 ```
 
 The suite fails loudly if any gate regresses — fee cap, eligibility, evidence

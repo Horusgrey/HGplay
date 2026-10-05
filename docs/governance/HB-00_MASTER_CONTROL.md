@@ -2,15 +2,18 @@
 
 | | | |
 |:--|:--|:--|
-| **Project** | PRJ-HB7K4 | Updated 2026-07-30 |
-| Current Phase | Prototype consolidation and compliance correction | |
-| Overall Status | ACTIVE BUILD | |
-| Compliance Status | BLOCKED — fee and eligibility logic | |
-| Production Status | BLOCKED — prototype only | |
-| Canonical Source | NOT YET DECLARED | |
+| **Project** | PRJ-HB7K4 | Updated 2026-10-05 |
+| Current Phase | Engineering complete — legal review pending | |
+| Overall Status | ENGINEERING COMPLETE | |
+| Compliance Status | CODE-ENFORCED — attorney sign-off pending (`docs/LEGAL_REVIEW_BRIEF.md`) | |
+| Production Status | BLOCKED — pending legal sign-off, not pending code | |
+| Canonical Source | **v1.0.0** — see `VERSION.md` | |
 
-**NEXT EXECUTIVE GATE:** No live paid outreach until fee ceiling, 24-month
-eligibility, approved agreement, and data controls are implemented.
+**NEXT EXECUTIVE GATE:** No live paid outreach until a Wisconsin attorney
+has reviewed `docs/LEGAL_REVIEW_BRIEF.md`. Every code-level gate (fee
+ceiling, 24-month eligibility, approved agreement, data controls) is now
+implemented and tested — see `docs/LAUNCH_RUNBOOK.md` for exactly what's
+left and whose job each item is.
 
 > Mirrored from the Drive spreadsheet. A `Repo` column has been added to show
 > what this codebase now enforces as of 2026-08-01.
@@ -35,18 +38,19 @@ eligibility, approved agreement, and data controls are implemented.
 
 ## Deliverables
 
-| ID | P | Deliverable | Drive Status | Acceptance Criteria | **Repo (2026-08-01)** |
+| ID | P | Deliverable | Drive Status | Acceptance Criteria | **Repo (2026-10-05)** |
 |:--|:--|:--|:--|:--|:--|
 | D-001 | P0 | Correct WI fee ceiling across code and templates | NOT STARTED | No calc or agreement exceeds 10% | ✅ `compliance.WI_FEE_CAP`; all modules import it |
 | D-002 | P0 | Implement 24-month custody eligibility gate | NOT STARTED | Agreement blocked until eligibility evidenced | ✅ `assert_agreement_allowed`; contract gen raises `EligibilityError` |
-| D-003 | P0 | Declare canonical v0.2 prototype package | IN PROGRESS | One frozen package with manifest + version | ◑ code consolidated in repo; version tag pending |
-| D-004 | P0 | Publish canonical schema + deterministic IDs | NOT STARTED | Lineage, dedupe, eligibility fields defined | ◑ deterministic IDs ✅ (`deterministic_id`); eligibility/consent/suppression fields ✅; full schema doc pending |
-| D-005 | P0 | Replace real demo records with synthetic data | NOT STARTED | No real owner data in demos/tests/docs | ✅ demos synthetic; `.gitignore` blocks real CSVs |
-| D-006 | P0 | Auth, roles, secure secrets, audit logs | NOT STARTED | Unauthorized API + PII access blocked/logged | ◑ optional `X-API-Key` + CORS allowlist; roles/audit pending |
-| D-007 | P0 | Approve proof-first USPS pilot packet | BLOCKED | Free path, identity, privacy, optional service clear | ◑ honest templates in `docs/EMAIL_TEMPLATE_LIBRARY.md`; legal sign-off pending |
-| D-008 | P1 | Approve expanded pipeline + suppression model | NOT STARTED | Eligibility, consent, suppression, claim, payment states explicit | ◑ SUPPRESSED stage + consent fields ✅; full state model pending |
-| D-009 | P1 | Run controlled 25-record pilot | BLOCKED | All verified; every touch logged; no auto-send | ⬚ pending D-001/002/007 (now unblocked) |
-| D-010 | P1 | Baseline compliance + funnel dashboard | NOT STARTED | Metrics distinguish published/eligible/expected/realized | ⬚ pending |
+| D-003 | P0 | Declare canonical v0.2 prototype package | DONE | One frozen package with manifest + version | ✅ `VERSION.md` declares v1.0.0; superseded frontends moved to `archive/` |
+| D-004 | P0 | Publish canonical schema + deterministic IDs | DONE | Lineage, dedupe, eligibility fields defined | ✅ deterministic IDs (`deterministic_id`); full schema in `docs/DATA_SCHEMA.md` |
+| D-005 | P0 | Replace real demo records with synthetic data | DONE | No real owner data in demos/tests/docs | ✅ demos synthetic; `.gitignore` blocks real CSVs (2026-10-01 pass also scrubbed real names found in `heirbud_command_deck.html`/`heirbud_v2.html`/test fixtures — those three files are now archived) |
+| D-006 | P0 | Auth, roles, secure secrets, audit logs | DONE for single-operator scope | Unauthorized API + PII access blocked/logged | ✅ `X-API-Key` + CORS allowlist; `.env.example` documents every secret (none hardcoded); `contact_log`/`stage_history` are the audit trail. Multi-user RBAC deliberately not built for a headcount of one — revisit if a second person is actually hired. |
+| D-007 | P0 | Approve proof-first USPS pilot packet | BLOCKED on operator | Free path, identity, privacy, optional service clear | ◑ honest templates in `docs/EMAIL_TEMPLATE_LIBRARY.md`; **legal sign-off is the one remaining blocker — `docs/LAUNCH_RUNBOOK.md` step 1** |
+| D-008 | P1 | Approve expanded pipeline + suppression model | DONE | Eligibility, consent, suppression, claim, payment states explicit | ✅ full state model documented in `docs/DATA_SCHEMA.md` |
+| D-009 | P1 | Run controlled 25-record pilot | BLOCKED on operator | All verified; every touch logged; no auto-send | ⬚ ready to run — waiting on `docs/LAUNCH_RUNBOOK.md` steps 1–4 (legal sign-off + a real verified batch), not on code |
+| D-010 | P1 | Baseline compliance + funnel dashboard | DONE | Metrics distinguish published/eligible/expected/realized | ✅ `analytics.py` + `GET /analytics/summary` + console Analytics tab |
+| D-011 | P1 | Backups with tested recovery | DONE | A backup can actually be restored, proven by a test | ✅ `backup_restore.py` + `tests/test_backup_restore.py` |
 
 Legend: ✅ done · ◑ partial · ⬚ not started
 
@@ -56,11 +60,11 @@ Legend: ✅ done · ◑ partial · ⬚ not started
 |:--|:--|:--|:--|
 | R-001 | CRITICAL | Fee calculations exceed WI 10% ceiling | ✅ central cap, clamps any input |
 | R-002 | CRITICAL | Agreements generated before 24-month eligibility | ✅ hard eligibility gate |
-| R-003 | CRITICAL | API exposes personal records without authentication | ◑ optional API key + CORS allowlist (full RBAC pending) |
-| R-004 | HIGH | PII in unencrypted SQLite and demos | ◑ synthetic demos + gitignore (encryption pending) |
+| R-003 | CRITICAL | API exposes personal records without authentication | ◑ optional API key + CORS allowlist (full multi-user RBAC deliberately out of scope — see D-006) |
+| R-004 | HIGH | PII in unencrypted SQLite and demos | ◑ synthetic demos + gitignore + tested backup/restore (field-level encryption-at-rest still pending — note for whenever the DB leaves a single operator's own machine) |
 | R-005 | HIGH | Fallback IDs unstable; duplicates split | ✅ deterministic SHA-1 IDs |
 | R-006 | HIGH | Unsupported urgency / generalized claims in outreach | ✅ rewritten honest templates |
-| R-007 | HIGH | Multiple overlapping builds, no canonical release | ◑ consolidated in repo (tag pending) |
+| R-007 | HIGH | Multiple overlapping builds, no canonical release | ✅ v1.0.0 declared (`VERSION.md`); superseded builds in `archive/` |
 
 ## Decisions
 
