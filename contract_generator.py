@@ -47,7 +47,7 @@ def generate_contract(prospect: dict, fee_pct: float = None, output_dir=OUTPUT_D
     # ── Letterhead ──
     c.setFillColor(INK)
     c.setFont("Times-BoldItalic", 26)
-    c.drawString(M, y, "ZGroup LLC")
+    c.drawString(M, y, compliance.BUSINESS_NAME)
     c.setFont("Helvetica", 8)
     c.setFillColor(DIM)
     c.drawString(M, y - 14, "WISCONSIN ASSET LOCATOR SERVICES")
@@ -114,7 +114,7 @@ def generate_contract(prospect: dict, fee_pct: float = None, output_dir=OUTPUT_D
     fee_amount = compliance.fee_amount(amount, fee_pct)
     net_to_claimant = amount - fee_amount
     terms = [
-        f"1. SERVICES. ZGroup LLC (\"Locator\") agrees to assist the Claimant in recovering the",
+        f"1. SERVICES. {compliance.BUSINESS_NAME} (\"Locator\") agrees to assist the Claimant in recovering the",
         f"    above-referenced unclaimed property from the Wisconsin Department of Revenue Unclaimed",
         f"    Property Division, including preparation of required claim forms and documentation and",
         f"    follow-up correspondence with the state. Locator is NOT the State of Wisconsin.",
@@ -168,7 +168,7 @@ def generate_contract(prospect: dict, fee_pct: float = None, output_dir=OUTPUT_D
     c.setFont("Helvetica", 7)
     c.setFillColor(DIM)
     c.drawCentredString(W / 2, 0.55 * inch,
-                        "ZGroup LLC · Wisconsin Asset Locator · This agreement is governed by the laws of the State of Wisconsin")
+                        f"{compliance.BUSINESS_NAME} · Wisconsin Asset Locator · This agreement is governed by the laws of the State of Wisconsin")
 
     c.save()
     return str(path)

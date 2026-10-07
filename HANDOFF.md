@@ -24,6 +24,9 @@ A separate claude.ai chat built `heirbud_dashboard.html`, `heirbud_v2.html` (sam
 - Anything useful from those files (e.g. one-click Gmail compose, CSV drag-drop) must be ported INTO this repo and pass `compliance.py`, not run alongside it.
 Other projects mentioned there (Clippy, Odin DNS, VCS-2/ZEarth) are parked and out of scope for HeirBud.
 
+## Business name
+ZGroup LLC is NOT a real legal entity. The code prints `HEIRBUD_BUSINESS_NAME` (default: Zack Horton) via `compliance.BUSINESS_NAME`. Docs under `docs/` still say "ZGroup LLC" in templates and must be updated before use.
+
 ## The one real blocker
 A Wisconsin attorney has not reviewed the model. Brief to send: `docs/LEGAL_REVIEW_BRIEF.md`. Remaining steps: `docs/LAUNCH_RUNBOOK.md`.
 

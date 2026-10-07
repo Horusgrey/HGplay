@@ -45,7 +45,7 @@ ACCENT = HexColor("#1a5c2a")
 # Fill these in with your real details before mailing.
 SENDER = {
     "name": "[Your Name]",
-    "org": "ZGroup LLC",
+    "org": compliance.BUSINESS_NAME,
     "line": "Wisconsin unclaimed-property assistance",
     "address": "[Your return address]",
     "contact": "[Your phone] · [Your email]",

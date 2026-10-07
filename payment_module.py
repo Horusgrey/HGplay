@@ -36,14 +36,14 @@ MAX_REMINDERS = 3
 
 # Fill in before real use. How claimants pay your fee.
 PAY_CONFIG = {
-    "business": "ZGroup LLC",
+    "business": compliance.BUSINESS_NAME,
     "your_name": "[Your Name]",
     "contact": "[Your phone] · [Your email]",
     "methods": {
         "Venmo": "@your-venmo",
         "PayPal": "you@example.com",
         "Zelle": "(555) 555-5555",
-        "Check": "ZGroup LLC, PO Box 000, City, WI",
+        "Check": f"{compliance.BUSINESS_NAME}, PO Box 000, City, WI",
     },
 }
 

@@ -57,7 +57,7 @@ def generate_scripts(prospect: dict) -> dict:
 
     cold_call_script = f"""HEIRBUD CALL — {name.upper()}
 
-"Hi, is this {fn}? ... Hi {fn}, this is [Your Name] with ZGroup, a Wisconsin
+"Hi, is this {fn}? ... Hi {fn}, this is [Your Name] with {compliance.BUSINESS_NAME}, a Wisconsin
 locator service. I'm not with the state — I want to be clear about that up front.
 
 I research public unclaimed-property records, and {opener}"
@@ -102,9 +102,9 @@ Want me to send the details so you can verify the record?
 
 [Your Name]
 [Your Phone] · [Your Email]
-ZGroup LLC — Wisconsin locator service (not a government agency)"""
+{compliance.BUSINESS_NAME} — Wisconsin locator service (not a government agency)"""
 
-    sms_opener = (f"Hi {fn}, this is [Name] with ZGroup (a private WI locator, not the "
+    sms_opener = (f"Hi {fn}, this is [Name] with {compliance.BUSINESS_NAME} (a private WI locator, not the "
                   f"state). Your name is on ~${amt} of unclaimed property held by "
                   f"Wisconsin. You can claim it free at {compliance.STATE_PORTAL}. "
                   f"Happy to help for a {fee:.0f}% fee only if you get paid — reply YES for details.")

@@ -33,11 +33,16 @@ WI_FEE_CAP = 0.10                        # 10% max of recovered value
 CUSTODY_MONTHS_REQUIRED = 24             # agreement void if custody < 24 months
 FEE_PAYMENT_WINDOW_DAYS = 30             # fee due within N days of owner payment
 
+# The name printed on every letter, agreement and invoice. Set HEIRBUD_BUSINESS_NAME
+# to your trade name or LLC once one legally exists; until then it's your own name.
+import os
+BUSINESS_NAME = os.environ.get("HEIRBUD_BUSINESS_NAME", "Zack Horton")
+
 # The single disclosure string. Do not paraphrase it in other modules.
 FREE_CLAIM_DISCLOSURE = (
     "You have the right to claim this property yourself, directly from the "
     "State of Wisconsin, at no cost. Visit revenue.wi.gov/Pages/UnclaimedProperty "
-    "or call (608) 267-7977. ZGroup LLC is a private locator service, is not the "
+    f"or call (608) 267-7977. {BUSINESS_NAME} is a private locator service, is not the "
     "State of Wisconsin or any government agency, and its assistance is optional."
 )
 
