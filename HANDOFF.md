@@ -16,6 +16,14 @@ HeirBud: a Wisconsin unclaimed-property recovery tool for ZGroup LLC. It finds o
 - Two letter modes: GRATUITY (no fee quoted, default) and CONTRACT (10% max, only after verified custody).
 - No real owner data in the repo. Keep it that way.
 
+## Other threads' HeirBud files (reconciled 2026-10-07)
+A separate claude.ai chat built `heirbud_dashboard.html`, `heirbud_v2.html` (same filename as the archived one, different file) and `heirbud_engine_v2.zip`. These are an OLDER prototype line, not the repo's v1.0.0:
+- The zip's `outreach_generator.py` uses 12/15/20% fee tiers. That is above Wisconsin's 10% cap. Do not run it or mail anything from it.
+- Its "157 tests pass" is the repo's number, not the zip's. Treat the zip as untested.
+- Its demo data uses real claimant names and amounts. Never copy real names, addresses or dollar amounts into this repo.
+- Anything useful from those files (e.g. one-click Gmail compose, CSV drag-drop) must be ported INTO this repo and pass `compliance.py`, not run alongside it.
+Other projects mentioned there (Clippy, Odin DNS, VCS-2/ZEarth) are parked and out of scope for HeirBud.
+
 ## The one real blocker
 A Wisconsin attorney has not reviewed the model. Brief to send: `docs/LEGAL_REVIEW_BRIEF.md`. Remaining steps: `docs/LAUNCH_RUNBOOK.md`.
 
