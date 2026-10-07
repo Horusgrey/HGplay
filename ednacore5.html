@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EDNA CORE</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#050505;--bg1:#0a0a0a;--z900:#131313;--z800:#1e1e1e;
+  --z700:#2a2a2a;--z600:#3a3a3a;--z500:#555;--z400:#777;
+  --z300:#999;--z200:#ccc;--z100:#f0f0f0;
+  --or:#ea580c;--or2:#f97316;--or3:rgba(234,88,12,.12);--or4:rgba(234,88,12,.06);
+  --red:#ef4444;
+  --mono:'JetBrains Mono',monospace;--sans:'Space Grotesk',sans-serif;
+}
+html,body{height:100%;background:var(--bg);color:var(--z100);font-family:var(--sans);font-size:13px;overflow:hidden}
+::-webkit-scrollbar{width:4px}::-webkit-scrollbar-thumb{background:var(--z700);border-radius:4px}
+.app{display:flex;height:100vh}
+.snav{width:64px;background:#000;border-right:1px solid var(--z900);display:flex;flex-direction:column;align-items:center;padding:22px 0;gap:5px;flex-shrink:0}
+.main{flex:1;overflow-y:auto;height:100vh}
+.logo{width:40px;height:40px;background:var(--or);border-radius:12px;display:flex;align-items:center;justify-content:center;margin-bottom:14px;box-shadow:0 8px 24px rgba(234,88,12,.35)}
+.nb{width:46px;height:46px;border-radius:12px;border:none;background:transparent;color:var(--z600);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s}
+.nb:hover{color:var(--z300);background:var(--z900)}
+.nb.on{background:var(--or);color:#fff;box-shadow:0 4px 18px rgba(234,88,12,.4)}
+.nb.won{background:var(--z100);color:#000}
+.nb.spa{margin-top:auto}
+input,select,textarea{background:var(--z900);border:1px solid var(--z800);color:var(--z100);font-family:var(--sans);font-size:13px;border-radius:10px;padding:11px 13px;outline:none;width:100%;transition:border-color .2s}
+input:focus,select:focus,textarea:focus{border-color:rgba(234,88,12,.4)}
+input::placeholder,textarea::placeholder{color:var(--z600)}
+select option{background:var(--z900)}
+textarea{resize:vertical;line-height:1.65}
+.btn{display:inline-flex;align-items:center;gap:7px;padding:11px 18px;border-radius:12px;border:none;font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.bp{background:var(--z100);color:#000}
+.bp:hover:not([disabled]){background:var(--or);color:#fff;box-shadow:0 6px 22px rgba(234,88,12,.35)}
+.bp[disabled]{background:var(--z800);color:var(--z600);cursor:not-allowed}
+.bg{background:transparent;color:var(--z500);border:1px solid var(--z800)}
+.bg:hover{color:var(--z200);border-color:var(--z600)}
+.bfull{width:100%;justify-content:center}
+.card{background:var(--z900);border:1px solid var(--z800);border-radius:20px;padding:22px}
+.inr{background:rgba(0,0,0,.5);border:1px solid var(--z900);border-radius:14px;padding:15px}
+.ptit{font-size:33px;font-weight:900;text-transform:uppercase;letter-spacing:-.04em;line-height:1}
+.psub{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.2em;color:var(--z500);margin-top:4px}
+.lbl{display:block;font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.15em;color:var(--z500);margin-bottom:5px}
+.slbl{font-family:var(--mono);font-size:9px;text-transform:uppercase;letter-spacing:.18em;color:var(--or2)}
+.badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:4px}
+.bz{background:var(--z800);color:var(--z400)}.bo{background:var(--or3);color:var(--or2)}
+.dv{height:1px;background:var(--z800);margin:14px 0}
+.g3{display:grid;grid-template-columns:repeat(auto-fill,minmax(270px,1fr));gap:16px}
+.tabg{display:flex;background:var(--z900);padding:3px;border-radius:12px;border:1px solid var(--z800);gap:2px}
+.tbtn{padding:7px 16px;border-radius:9px;border:none;background:transparent;color:var(--z500);font-family:var(--sans);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;cursor:pointer;transition:all .2s}
+.tbtn.on{background:var(--z800);color:var(--z100)}
+.ac{background:var(--z900);border:1px solid var(--z800);border-radius:22px;padding:24px;position:relative;overflow:hidden;transition:border-color .2s}
+.ac:hover{border-color:rgba(234,88,12,.2)}
+.acb{position:absolute;top:16px;right:16px;display:none;gap:5px}
+.ac:hover .acb{display:flex}
+.aico{width:44px;height:44px;background:var(--z800);border-radius:13px;display:flex;align-items:center;justify-content:center;color:var(--z500);margin-bottom:16px;transition:all .2s}
+.ac:hover .aico{background:var(--or);color:#fff}
+.an{font-size:16px;font-weight:700;line-height:1.2;transition:color .2s}
+.ac:hover .an{color:#fb923c}
+.at{font-size:11px;color:var(--z400);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;margin-top:10px}
+.addcard{height:230px;border:2px dashed var(--z800);border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:var(--z600);cursor:pointer;transition:all .2s;background:transparent;font-family:var(--sans);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;width:100%}
+.addcard:hover{border-color:rgba(234,88,12,.3);color:var(--or);background:var(--or4)}
+.ob{background:var(--bg1);border:1px solid var(--z900);border-radius:13px;overflow:hidden;margin-bottom:9px}
+.ohd{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-bottom:1px solid var(--z900)}
+.ok{font-family:var(--mono);font-size:9px;color:var(--or2);text-transform:uppercase;letter-spacing:.15em}
+.obb{padding:12px 14px;font-size:11px;color:var(--z300);line-height:1.75;white-space:pre-wrap;word-break:break-word;max-height:250px;overflow-y:auto;font-family:var(--mono)}
+.jb{background:var(--bg);border:1px solid var(--z900);border-left:3px solid var(--or);padding:11px 13px;font-size:11px;font-family:var(--mono);color:var(--z300);line-height:1.6;white-space:pre-wrap;max-height:190px;overflow-y:auto}
+.cbtn{background:none;border:none;color:var(--z600);font-family:var(--mono);font-size:9px;cursor:pointer;padding:3px 8px;border-radius:4px;transition:all .2s}
+.cbtn:hover{color:var(--or);background:var(--or4)}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fa{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.sp{width:15px;height:15px;border:2px solid var(--z700);border-top-color:var(--or);border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+.pd{width:7px;height:7px;background:var(--or);border-radius:50%;animation:pulse 1.5s ease infinite;display:inline-block}
+.fi{animation:fa .3s ease forwards}
+.pban{background:linear-gradient(90deg,rgba(234,88,12,.1),transparent);border:1px solid rgba(234,88,12,.2);border-radius:12px;padding:13px 16px;display:flex;align-items:center;gap:11px;font-size:11px;font-family:var(--mono);color:var(--or2);margin-bottom:18px}
+.err{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.25);border-radius:12px;padding:14px 16px;color:var(--red);font-family:var(--mono);font-size:11px;line-height:1.6;margin-bottom:14px}
+.mbg{position:fixed;inset:0;background:rgba(0,0,0,.88);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal{background:var(--z900);border:1px solid var(--z700);border-radius:18px;padding:26px;max-width:480px;width:100%;max-height:80vh;overflow-y:auto}
+.empty{text-align:center;padding:48px 20px;color:var(--z600)}
+.empty p{font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.15em;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app">
+  <nav class="snav">
+    <div class="logo">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    </div>
+    <button class="nb on" id="nVault"  onclick="go('vault')"  title="Vault">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg>
+    </button>
+    <button class="nb"    id="nStage"  onclick="go('stage')"  title="Stage">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+    </button>
+    <button class="nb"    id="nStudio" onclick="go('studio')" title="Studio">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+    </button>
+    <button class="nb spa won" id="nBible"  onclick="go('bible')"  title="Bible">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+    </button>
+    <button class="nb" onclick="showAM()" title="API Key" style="margin-top:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></svg>
+    </button>
+  </nav>
+  <main class="main" id="MC"></main>
+</div>
+
+<!-- API MODAL -->
+<div id="AM" class="mbg" style="display:none">
+  <div class="modal">
+    <div style="font-size:17px;font-weight:800;text-transform:uppercase;margin-bottom:10px">Claude API Key</div>
+    <p style="font-size:11px;color:var(--z400);line-height:1.7;margin-bottom:16px;font-family:var(--mono)">Stored in your browser localStorage only. Sent directly to api.anthropic.com.</p>
+    <div style="margin-bottom:14px"><label class="lbl">API Key (sk-ant-…)</label><input type="password" id="AK" placeholder="sk-ant-api03-…"/></div>
+    <div style="display:flex;gap:10px;align-items:center">
+      <button class="btn bp" onclick="saveKey()">Save</button>
+      <button class="btn bg" onclick="closeAM()">Cancel</button>
+      <a href="https://console.anthropic.com" target="_blank" style="font-size:10px;color:var(--z500);font-family:var(--mono);margin-left:auto">Get key →</a>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MODAL -->
+<div id="EM" class="mbg" style="display:none">
+  <div class="modal" style="max-width:520px">
+    <div id="ET" style="font-size:17px;font-weight:800;text-transform:uppercase;margin-bottom:14px">Edit</div>
+    <div id="EF"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn bp" onclick="doEdit()">Save</button>
+      <button class="btn bg" onclick="closeEM()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── CONSTANTS ─────────────────────────────────────────────────────────── */
+var LENS = [
+  {id:'18mm',  label:'18mm Wide Angle',   desc:'Environment / Isolation'},
+  {id:'35mm',  label:'35mm Storytelling', desc:'Grounded Narrative'},
+  {id:'50mm',  label:'50mm Natural',      desc:'Human Eye'},
+  {id:'85mm',  label:'85mm Portrait',     desc:'Emotional Intimacy'},
+  {id:'135mm', label:'135mm Telephoto',   desc:'Voyeuristic / Compressed'}
+];
+var LIGHT = [
+  {id:'golden',  label:'Golden Hour',    icon:'🌅'},
+  {id:'noir',    label:'Film Noir',       icon:'👤'},
+  {id:'sodium',  label:'Sodium Analog',   icon:'🔶'},
+  {id:'natural', label:'Natural Light',   icon:'☀️'},
+  {id:'fog',     label:'Desaturated Fog', icon:'☁️'},
+  {id:'neon',    label:'Cyber Neon',      icon:'🎆'}
+];
+var SYS = "You are EDNA CORE, the Master Deterministic Engine using Universal Character Schema (UCS v2.0) and CineFlow Cinematic Grammar.\n\nRespond with ALL five sections using EXACTLY these headers:\n\n## VCS-OBS\nEnvironmental read: entropy, visibility, subject positioning in precise cinematic language.\n\n## VCS-STYLE\nTechnical lock: Lens spec, lighting, grain/texture, color palette, forbidden drift list.\n\n## VCS-FORGE\nJSON object: {\"world_lock\":\"\",\"subject_fidelity_id\":\"\",\"camera_anchor_coordinates\":{\"x\":0,\"y\":0,\"z\":0,\"angle\":0},\"physics_state\":\"\",\"continuity_notes\":[]}\n\n## VCS-MATCH\nDense, production-ready image generation prompt for a master keyframe. Immediately copy-pasteable into any image generator.\n\n## VCS-TABLE-READ\nHigh-fidelity dialogue or interior monologue using the character exact speech tics, cadence, and soul kernel constraints. No exposition. No therapy tone.";
+
+/* ── STATE ─────────────────────────────────────────────────────────────── */
+var D = {
+  view:'vault', tab:'c',
+  chars:[], locs:[], bible:'',
+  stage:{cid:'',lid:'',lens:'50mm',light:'natural',action:''},
+  out:null, busy:false,
+  eid:null, etype:null
+};
+
+function load() {
+  try {
+    var raw = localStorage.getItem('edna4');
+    if (!raw) return;
+    var d = JSON.parse(raw);
+    D.chars  = d.chars  || [];
+    D.locs   = d.locs   || [];
+    D.bible  = d.bible  || '';
+    D.out    = d.out    || null;
+    if (d.stage) {
+      D.stage.cid    = d.stage.cid    || '';
+      D.stage.lid    = d.stage.lid    || '';
+      D.stage.lens   = d.stage.lens   || '50mm';
+      D.stage.light  = d.stage.light  || 'natural';
+      D.stage.action = d.stage.action || '';
+    }
+  } catch(e) { console.error('Load error:', e); }
+}
+
+function save() {
+  try {
+    localStorage.setItem('edna4', JSON.stringify({
+      chars: D.chars, locs: D.locs, bible: D.bible,
+      out: D.out, stage: D.stage
+    }));
+  } catch(e) { console.error('Save error:', e); }
+}
+
+function gk() { return localStorage.getItem('edna_k') || ''; }
+
+function xe(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+/* ── NAVIGATION ─────────────────────────────────────────────────────────── */
+function go(v) {
+  D.view = v;
+  var ids = ['nVault','nStage','nStudio','nBible'];
+  for (var i = 0; i < ids.length; i++) {
+    var b = document.getElementById(ids[i]);
+    if (b) { b.classList.remove('on','won'); }
+  }
+  var map = {vault:'nVault', stage:'nStage', studio:'nStudio', bible:'nBible'};
+  var nb = document.getElementById(map[v]);
+  if (nb) nb.classList.add(v === 'bible' ? 'won' : 'on');
+  render();
+}
+
+/* ── CLAUDE API ─────────────────────────────────────────────────────────── */
+function callClaude(sys, usr, mt, callback) {
+  var k = gk();
+  if (!k) {
+    showAM();
+    callback(new Error('No API key set. Enter your Claude API key first.'), null);
+    return;
+  }
+  fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': k,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true'
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: mt || 3000,
+      system: sys,
+      messages: [{role:'user', content: usr}]
+    })
+  })
+  .then(function(r) {
+    if (!r.ok) {
+      return r.json().then(function(e) {
+        callback(new Error(e.error ? e.error.message : 'HTTP ' + r.status), null);
+      });
+    }
+    return r.json().then(function(d) {
+      var text = d.content && d.content[0] ? d.content[0].text : '';
+      callback(null, text);
+    });
+  })
+  .catch(function(e) {
+    callback(new Error('Network error: ' + e.message + '. Make sure you are opening this file directly in a browser (not inside Claude.ai preview).'), null);
+  });
+}
+
+function parseOut(text) {
+  var keys = ['VCS-OBS','VCS-STYLE','VCS-FORGE','VCS-MATCH','VCS-TABLE-READ'];
+  var out = {};
+  for (var i = 0; i < keys.length; i++) {
+    var k = keys[i];
+    var nk = keys[i+1];
+    var pattern = '##\\s+' + k + '([\\s\\S]*?)' + (nk ? '(?=##\\s+' + nk + ')' : '$');
+    var re = new RegExp(pattern);
+    var m = re.exec(text);
+    out[k] = m ? m[1].trim() : '';
+  }
+  return out;
+}
+
+/* ── RUN ORCHESTRATION ──────────────────────────────────────────────────── */
+function run() {
+  var ta = document.getElementById('ACT');
+  var action = ta ? ta.value.trim() : D.stage.action;
+  if (!action) { showStatus('Enter an action beat first.', true); return; }
+  D.stage.action = action;
+  D.busy = true;
+  D.out = null;
+  save();
+
+  var mc = document.getElementById('MC');
+  mc.innerHTML = '<div style="padding:46px"><div class="pban fi"><span class="sp"></span><span style="margin-left:2px">EDNA CORE processing — Claude running orchestration\u2026</span></div>'
+    + '<div style="opacity:.3;display:flex;flex-direction:column;gap:8px">'
+    + ['VCS-OBS','VCS-STYLE','VCS-FORGE','VCS-MATCH','VCS-TABLE-READ'].map(function(k) {
+        return '<div class="ob"><div class="ohd"><span class="ok"><span class="pd" style="margin-right:7px"></span>' + k + '</span></div></div>';
+      }).join('')
+    + '</div></div>';
+
+  var ch = null, lo = null;
+  for (var i = 0; i < D.chars.length; i++) { if (D.chars[i].id === D.stage.cid) { ch = D.chars[i]; break; } }
+  for (var j = 0; j < D.locs.length;  j++) { if (D.locs[j].id  === D.stage.lid) { lo = D.locs[j];  break; } }
+
+  var msg = 'PRODUCTION BIBLE:\n' + (D.bible || '(none)')
+    + '\n\nCHARACTER: ' + (ch ? ch.name : 'none')
+    + '\nSOUL: '     + (ch ? ch.soul    : '—')
+    + '\nPERSONA: '  + (ch ? ch.persona : '—')
+    + '\n\nLOCATION: ' + (lo ? lo.name : 'none')
+    + '\nPHYSICS: '  + (lo ? lo.physics : '—')
+    + '\nDETAILS: '  + (lo ? lo.details : '—')
+    + '\n\nCINEFLOW:\nLens: ' + D.stage.lens + '\nLighting: ' + D.stage.light
+    + '\n\nACTION BEAT:\n' + action;
+
+  callClaude(SYS, msg, 3000, function(err, text) {
+    D.busy = false;
+    if (err) {
+      D.out = {_err: err.message};
+    } else {
+      D.out = parseOut(text);
+    }
+    save();
+    go('studio');
+  });
+}
+
+/* ── STATUS HELPER ──────────────────────────────────────────────────────── */
+function showStatus(msg, isErr) {
+  var el = document.getElementById('STATUS');
+  if (el) { el.textContent = msg; el.style.color = isErr ? 'var(--red)' : 'var(--or2)'; }
+}
+
+/* ── ASSET ACTIONS ──────────────────────────────────────────────────────── */
+function newA() {
+  var t = D.tab === 'c' ? 'character' : 'environment';
+  var n = prompt('Name for new ' + t + ':');
+  if (!n || !n.trim()) return;
+  var a = {
+    id: 'a' + Date.now(),
+    name: n.trim(),
+    soul:    'Archetype: \nMotivation: \nCore fear: ',
+    persona: 'Visuals: \nVoice cadence: \nSpeech tics: ',
+    physics: 'Decay: Low\nHazards: \nScarcity: High',
+    details: 'Atmosphere: \nKey landmarks: '
+  };
+  if (D.tab === 'c') D.chars.push(a); else D.locs.push(a);
+  save(); render();
+}
+
+function delA(id) {
+  if (!confirm('Delete this asset?')) return;
+  D.chars = D.chars.filter(function(c) { return c.id !== id; });
+  D.locs  = D.locs.filter(function(l)  { return l.id !== id; });
+  save(); render();
+}
+
+function editA(id) {
+  var all = D.chars.concat(D.locs);
+  var a = null;
+  for (var i = 0; i < all.length; i++) { if (all[i].id === id) { a = all[i]; break; } }
+  if (!a) return;
+  var isC = false;
+  for (var j = 0; j < D.chars.length; j++) { if (D.chars[j].id === id) { isC = true; break; } }
+  D.eid = id; D.etype = isC ? 'c' : 'l';
+  document.getElementById('ET').textContent = 'Edit — ' + a.name;
+  document.getElementById('EF').innerHTML = isC
+    ? '<div style="margin-bottom:12px"><label class="lbl">Soul Kernel</label><textarea id="E1" rows="4" style="border-radius:8px">' + xe(a.soul) + '</textarea></div><div><label class="lbl">Persona Layer</label><textarea id="E2" rows="4" style="border-radius:8px">' + xe(a.persona) + '</textarea></div>'
+    : '<div style="margin-bottom:12px"><label class="lbl">Environment Physics</label><textarea id="E1" rows="4" style="border-radius:8px">' + xe(a.physics) + '</textarea></div><div><label class="lbl">Set Details</label><textarea id="E2" rows="4" style="border-radius:8px">' + xe(a.details) + '</textarea></div>';
+  document.getElementById('EM').style.display = 'flex';
+}
+
+function doEdit() {
+  var v1 = (document.getElementById('E1') || {value:''}).value;
+  var v2 = (document.getElementById('E2') || {value:''}).value;
+  if (D.etype === 'c') {
+    for (var i = 0; i < D.chars.length; i++) { if (D.chars[i].id === D.eid) { D.chars[i].soul = v1; D.chars[i].persona = v2; break; } }
+  } else {
+    for (var j = 0; j < D.locs.length; j++) { if (D.locs[j].id === D.eid) { D.locs[j].physics = v1; D.locs[j].details = v2; break; } }
+  }
+  closeEM(); save(); render();
+}
+
+function closeEM() { document.getElementById('EM').style.display = 'none'; }
+
+function mount(t, id) {
+  if (t === 'c') D.stage.cid = id; else D.stage.lid = id;
+  go('stage');
+}
+
+/* ── COPY ───────────────────────────────────────────────────────────────── */
+function cpK(k, btn) {
+  var text = D.out ? (D.out[k] || '') : '';
+  try { navigator.clipboard.writeText(text); } catch(e) {}
+  var orig = btn.textContent;
+  btn.textContent = '✓'; setTimeout(function() { btn.textContent = orig; }, 1400);
+}
+
+/* ── API MODAL ──────────────────────────────────────────────────────────── */
+function showAM() { document.getElementById('AK').value = gk(); document.getElementById('AM').style.display = 'flex'; }
+function closeAM() { document.getElementById('AM').style.display = 'none'; }
+function saveKey() {
+  var k = document.getElementById('AK').value.trim();
+  if (k) localStorage.setItem('edna_k', k);
+  closeAM();
+}
+
+/* ── RENDER ─────────────────────────────────────────────────────────────── */
+function render() {
+  if (D.busy) return;
+  var mc = document.getElementById('MC');
+  if (!mc) return;
+  if      (D.view === 'vault')  mc.innerHTML = vVault();
+  else if (D.view === 'stage')  mc.innerHTML = vStage();
+  else if (D.view === 'studio') mc.innerHTML = vStudio();
+  else if (D.view === 'bible')  mc.innerHTML = vBible();
+}
+
+/* ── VAULT VIEW ─────────────────────────────────────────────────────────── */
+function vVault() {
+  var isC = D.tab === 'c';
+  var items = isC ? D.chars : D.locs;
+  var t = isC ? 'c' : 'l';
+
+  var cards = items.map(function(a) {
+    var body = (isC ? a.soul : a.details) || 'No metadata. Click Edit to add.';
+    var short = body.slice(0, 130) + (body.length > 130 ? '…' : '');
+    var charIco = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>';
+    var locIco  = '<svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>';
+    return '<div class="ac">'
+      + '<div class="acb">'
+      + '<button class="btn bg" style="padding:5px 10px;font-size:9px;border-radius:7px" onclick="editA(\'' + a.id + '\')">Edit</button>'
+      + '<button class="btn bg" style="padding:5px 9px;border-radius:7px;color:var(--red);border-color:rgba(239,68,68,.3)" onclick="delA(\'' + a.id + '\')">'
+      + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>'
+      + '</button></div>'
+      + '<div class="aico">' + (isC ? charIco : locIco) + '</div>'
+      + '<div class="an">' + xe(a.name) + '</div>'
+      + '<div style="display:flex;gap:5px;margin-top:4px">'
+      + '<span class="badge bz">ID:' + a.id.slice(0,8) + '</span>'
+      + '<span class="badge bo">Locked v1.0</span></div>'
+      + '<div class="dv"></div>'
+      + '<div class="at">' + xe(short) + '</div>'
+      + '<div style="margin-top:18px"><button class="btn bg" style="font-size:9px;padding:7px 13px;border-radius:8px" onclick="mount(\'' + t + '\',\'' + a.id + '\')">Mount to Stage →</button></div>'
+      + '</div>';
+  }).join('');
+
+  return '<div style="padding:36px 44px;max-width:1200px;margin:0 auto">'
+    + '<header style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:32px">'
+    + '<div><h1 class="ptit">Asset Vault</h1><p class="psub">UCS v2.0 Persistent Storage</p></div>'
+    + '<div class="tabg">'
+    + '<button class="tbtn ' + (isC ? 'on' : '') + '" onclick="D.tab=\'c\';render()">Characters</button>'
+    + '<button class="tbtn ' + (!isC ? 'on' : '') + '" onclick="D.tab=\'l\';render()">Environments</button>'
+    + '</div></header>'
+    + '<div class="g3">'
+    + '<button class="addcard" onclick="newA()">'
+    + '<svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>'
+    + 'New ' + (isC ? 'Character' : 'Environment') + '</button>'
+    + cards + '</div>'
+    + (items.length === 0
+      ? '<div class="empty" style="margin-top:16px"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--z700)" stroke-width="1.2"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg><p>Vault empty — add your first ' + (isC ? 'character' : 'environment') + '</p></div>'
+      : '')
+    + '</div>';
+}
+
+/* ── STAGE VIEW ─────────────────────────────────────────────────────────── */
+function vStage() {
+  var ch = null, lo = null;
+  for (var i = 0; i < D.chars.length; i++) { if (D.chars[i].id === D.stage.cid) { ch = D.chars[i]; break; } }
+  for (var j = 0; j < D.locs.length;  j++) { if (D.locs[j].id  === D.stage.lid) { lo = D.locs[j];  break; } }
+
+  var co = '<option value="">Select character\u2026</option>' + D.chars.map(function(c) { return '<option value="' + c.id + '"' + (D.stage.cid === c.id ? ' selected' : '') + '>' + xe(c.name) + '</option>'; }).join('');
+  var lo2 = '<option value="">Select set\u2026</option>' + D.locs.map(function(l) { return '<option value="' + l.id + '"' + (D.stage.lid === l.id ? ' selected' : '') + '>' + xe(l.name) + '</option>'; }).join('');
+  var le = LENS.map(function(l) { return '<option value="' + l.id + '"' + (D.stage.lens === l.id ? ' selected' : '') + '>' + l.label + ' \u2014 ' + l.desc + '</option>'; }).join('');
+  var li = LIGHT.map(function(l) { return '<option value="' + l.id + '"' + (D.stage.light === l.id ? ' selected' : '') + '>' + l.icon + ' ' + l.label + '</option>'; }).join('');
+
+  var preview = '';
+  if (ch) {
+    preview += '<div class="card" style="border-color:rgba(234,88,12,.2);margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
+      + '<div style="width:32px;height:32px;background:var(--or3);border-radius:9px;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--or2)" stroke-width="2"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg></div>'
+      + '<div><div style="font-weight:700;font-size:13px">' + xe(ch.name) + '</div><div style="font-size:9px;font-family:var(--mono);color:var(--z500);text-transform:uppercase;letter-spacing:.1em">Active Subject</div></div></div>'
+      + '<p style="font-size:11px;color:var(--z400);line-height:1.6">' + xe(ch.soul.slice(0, 150)) + (ch.soul.length > 150 ? '\u2026' : '') + '</p></div>';
+  }
+  if (lo) {
+    preview += '<div class="card" style="margin-bottom:10px">'
+      + '<div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">'
+      + '<div style="width:32px;height:32px;background:var(--z800);border-radius:9px;display:flex;align-items:center;justify-content:center"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--z400)" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>'
+      + '<div><div style="font-weight:700;font-size:13px">' + xe(lo.name) + '</div><div style="font-size:9px;font-family:var(--mono);color:var(--z500);text-transform:uppercase;letter-spacing:.1em">Environment Set</div></div></div>'
+      + '<p style="font-size:11px;color:var(--z400);line-height:1.6">' + xe((lo.details || lo.physics).slice(0, 140)) + '</p></div>';
+  }
+  if (!ch && !lo) {
+    preview = '<div class="empty"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="var(--z700)" stroke-width="1.2"><polygon points="5 3 19 12 5 21 5 3"/></svg><p>Mount a character and environment from the Vault</p></div>';
+  }
+  if (ch || lo) {
+    preview += '<div class="card"><p class="slbl" style="margin-bottom:7px">CineFlow Lock</p><div style="display:flex;gap:6px;flex-wrap:wrap"><span class="badge bo">Lens: ' + xe(D.stage.lens) + '</span><span class="badge bz">Light: ' + xe(D.stage.light) + '</span></div></div>';
+  }
+
+  return '<div style="padding:36px 44px;max-width:1200px;margin:0 auto">'
+    + '<div style="display:grid;grid-template-columns:310px 1fr;gap:30px;align-items:start">'
+    + '<div style="display:flex;flex-direction:column;gap:16px" class="fi">'
+    + '<div><h2 class="ptit">Director\'s<br>Stage</h2><p class="psub">blocking &amp; variable map</p></div>'
+    + '<div><label class="lbl">Active Subject</label><select onchange="D.stage.cid=this.value;save();render()">' + co + '</select></div>'
+    + '<div><label class="lbl">Environment Set</label><select onchange="D.stage.lid=this.value;save();render()">' + lo2 + '</select></div>'
+    + '<div class="inr"><p class="slbl" style="margin-bottom:12px">CineFlow Variable Bank</p>'
+    + '<div style="display:flex;flex-direction:column;gap:10px">'
+    + '<div><label class="lbl">Lens Profile</label><select onchange="D.stage.lens=this.value;save()">' + le + '</select></div>'
+    + '<div><label class="lbl">Lighting Mood</label><select onchange="D.stage.light=this.value;save()">' + li + '</select></div>'
+    + '</div></div>'
+    + '<div><label class="lbl">Action Beat / Table Read Text</label>'
+    + '<textarea id="ACT" rows="6" placeholder="Paste script dialogue or describe the character action beat\u2026">' + xe(D.stage.action) + '</textarea></div>'
+    + '<div id="STATUS" style="font-size:11px;font-family:var(--mono);min-height:16px"></div>'
+    + '<button class="btn bp bfull" style="padding:15px" onclick="run()">'
+    + '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>'
+    + 'Run EDNA Orchestration</button>'
+    + '</div>'
+    + '<div class="fi" style="padding-top:4px"><p class="slbl" style="margin-bottom:12px">Stage Preview</p>' + preview + '</div>'
+    + '</div></div>';
+}
+
+/* ── STUDIO VIEW ─────────────────────────────────────────────────────────── */
+function vStudio() {
+  if (!D.out) return '<div style="padding:46px"><h2 class="ptit">Output Studio</h2><p class="psub" style="margin-bottom:28px">Run orchestration from Stage</p><div class="empty"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="var(--z700)" stroke-width="1.2"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg><p>No output yet</p></div></div>';
+
+  if (D.out._err) return '<div style="padding:46px"><h2 class="ptit" style="margin-bottom:12px">Output Studio</h2>'
+    + '<div class="err">⚠ ' + xe(D.out._err) + '</div>'
+    + '<p style="font-size:11px;color:var(--z500);font-family:var(--mono);line-height:1.7;margin-bottom:16px">If you see a network error, make sure you have downloaded this file and are opening it directly in your browser \u2014 not viewing it inside Claude.ai.</p>'
+    + '<button class="btn bg" onclick="go(\'stage\')">← Back to Stage</button></div>';
+
+  var forge = D.out['VCS-FORGE'] || '';
+  var match = D.out['VCS-MATCH'] || '';
+  var tr    = D.out['VCS-TABLE-READ'] || '';
+
+  var leftCol = ['VCS-OBS','VCS-STYLE'].map(function(k) {
+    return '<div class="ob"><div class="ohd"><span class="ok">' + k + '</span><button class="cbtn" onclick="cpK(\'' + k + '\',this)">copy</button></div><div class="obb">' + xe(D.out[k] || '—') + '</div></div>';
+  }).join('');
+
+  if (forge) {
+    leftCol += '<div class="ob"><div class="ohd"><span class="ok">VCS-FORGE</span><button class="cbtn" onclick="cpK(\'VCS-FORGE\',this)">copy</button></div><div class="jb">' + xe(forge) + '</div></div>';
+  }
+
+  var rightCol = '';
+  if (match) {
+    rightCol += '<div><p class="slbl" style="margin-bottom:8px">VCS-MATCH \u2014 Image Prompt</p>'
+      + '<div style="background:var(--bg1);border:1px solid var(--z900);border-radius:12px;padding:13px;font-size:11px;font-family:var(--mono);color:var(--z300);line-height:1.7;max-height:150px;overflow-y:auto">' + xe(match) + '</div>'
+      + '<button class="btn bg bfull" style="margin-top:8px;font-size:10px;padding:9px" onclick="cpK(\'VCS-MATCH\',this)">Copy for image generator</button></div>';
+  }
+  if (tr) {
+    rightCol += '<div><p class="slbl" style="margin-bottom:8px">&#127897; VCS-TABLE-READ</p>'
+      + '<div style="background:linear-gradient(135deg,var(--bg1),rgba(234,88,12,.02));border:1px solid rgba(234,88,12,.12);border-radius:12px;padding:15px;font-size:13px;color:var(--z200);line-height:1.85;font-style:italic">' + xe(tr) + '</div>'
+      + '<button class="btn bg bfull" style="margin-top:8px;font-size:10px;padding:9px" onclick="cpK(\'VCS-TABLE-READ\',this)">Copy table read</button></div>';
+  }
+  rightCol += '<div class="card" style="background:var(--bg1)"><p class="slbl" style="margin-bottom:6px">Session</p><p style="font-size:10px;color:var(--z500);font-family:var(--mono)">Saved to localStorage</p><button class="btn bg bfull" style="margin-top:10px;font-size:10px;padding:9px" onclick="go(\'stage\')">\u21ba New Orchestration</button><button class="btn bg bfull" style="margin-top:8px;font-size:10px;padding:9px" onclick="dlOut()">\u2193 Export .txt</button></div>';
+
+  return '<div style="padding:36px 44px;max-width:1360px;margin:0 auto">'
+    + '<header style="display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:26px">'
+    + '<div><h2 class="ptit">Output Studio</h2><p class="psub">Last orchestration</p></div>'
+    + '<button class="btn bg" style="padding:9px 14px;font-size:10px" onclick="go(\'stage\')">← Stage</button></header>'
+    + '<div style="display:grid;grid-template-columns:1fr 400px;gap:18px;align-items:start" class="fi">'
+    + '<div>' + leftCol + '</div>'
+    + '<div style="display:flex;flex-direction:column;gap:14px">' + rightCol + '</div>'
+    + '</div></div>';
+}
+
+/* ── BIBLE VIEW ──────────────────────────────────────────────────────────── */
+function vBible() {
+  return '<div style="padding:36px 44px;max-width:860px;margin:0 auto;height:calc(100vh - 72px);display:flex;flex-direction:column">'
+    + '<h2 class="ptit">Production Bible</h2>'
+    + '<p class="psub" style="margin-bottom:22px">Global World State &amp; Canon Engine</p>'
+    + '<textarea id="BTA" style="flex:1;background:var(--z900);border:1px solid var(--z800);border-radius:16px;padding:26px;font-size:14px;font-weight:300;line-height:1.9;min-height:400px;resize:none" '
+    + 'placeholder="Inject world laws, historical canon, and physical constraints here\u2026\n\nExample:\nWORLD: Near-future Chicago 2223\nSYNEDOL: Black-market memory drug \u2014 main economy.\nTONE: Shameless meets District 9, BCS side alleys.\nFORBIDDEN: Neon / glossy futurism / hero framing / beauty lighting / redemption arcs">'
+    + xe(D.bible) + '</textarea>'
+    + '<div style="display:flex;align-items:center;gap:7px;font-size:10px;font-family:var(--mono);color:var(--z600);text-transform:uppercase;letter-spacing:.1em;margin-top:10px">'
+    + '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--or)" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>'
+    + 'Auto-saves on input</div></div>';
+}
+
+/* ── DOWNLOAD ────────────────────────────────────────────────────────────── */
+function dlOut() {
+  if (!D.out) return;
+  var txt = ['VCS-OBS','VCS-STYLE','VCS-FORGE','VCS-MATCH','VCS-TABLE-READ']
+    .map(function(k) { return '## ' + k + '\n' + (D.out[k] || ''); })
+    .join('\n\n---\n\n');
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([txt], {type:'text/plain'}));
+  a.download = 'edna-' + Date.now() + '.txt';
+  a.click();
+}
+
+/* ── EVENT DELEGATION (bible textarea) ───────────────────────────────────── */
+document.getElementById('MC').addEventListener('input', function(e) {
+  if (e.target && e.target.id === 'BTA') {
+    D.bible = e.target.value;
+    save();
+  }
+});
+
+/* ── INIT ────────────────────────────────────────────────────────────────── */
+load();
+render();
+
+if (!gk()) {
+  setTimeout(function() {
+    if (confirm('Welcome to EDNA CORE.\n\nIMPORTANT: This file must be opened directly in your browser (not inside Claude.ai) for API calls to work.\n\nSet your Claude API key now?')) {
+      showAM();
+    }
+  }, 600);
+}
+</script>
+</body>
+</html>
